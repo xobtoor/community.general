@@ -122,11 +122,11 @@ from ansible.module_utils.basic import AnsibleModule
 
 
 def get_bundler_executable(module):
-    if module.params.get('executable'):
-        result = module.params.get('executable').split(' ')
-    else:
-        result = [module.get_bin_path('bundle', True)]
-    return result
+    return (
+        module.params.get('executable').split(' ')
+        if module.params.get('executable')
+        else [module.get_bin_path('bundle', True)]
+    )
 
 
 def main():

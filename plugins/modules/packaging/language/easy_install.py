@@ -109,11 +109,7 @@ def _get_easy_install(module, env=None, executable=None):
         else:
             candidate_easy_inst_basenames.insert(0, executable)
     if easy_install is None:
-        if env is None:
-            opt_dirs = []
-        else:
-            # Try easy_install with the virtualenv directory first.
-            opt_dirs = ['%s/bin' % env]
+        opt_dirs = [] if env is None else ['%s/bin' % env]
         for basename in candidate_easy_inst_basenames:
             easy_install = module.get_bin_path(basename, False, opt_dirs)
             if easy_install is not None:
@@ -172,7 +168,6 @@ def main():
 
     easy_install = _get_easy_install(module, env, executable)
 
-    cmd = None
     changed = False
     installed = _is_package_installed(module, name, easy_install, executable_arguments)
 
@@ -188,6 +183,7 @@ def main():
         changed = True
 
     if rc != 0:
+        cmd = None
         module.fail_json(msg=err, cmd=cmd)
 
     module.exit_json(changed=changed, binary=easy_install,

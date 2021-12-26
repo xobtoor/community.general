@@ -151,7 +151,6 @@ class ManageIQ(object):
         resource = self.find_collection_resource_by(collection_name, **params)
         if resource:
             return resource
-        else:
-            msg = "{collection_name} where {params} does not exist in manageiq".format(
-                collection_name=collection_name, params=str(params))
-            self.module.fail_json(msg=msg)
+        msg = "{collection_name} where {params} does not exist in manageiq".format(
+            collection_name=collection_name, params=str(params))
+        self.module.fail_json(msg=msg)

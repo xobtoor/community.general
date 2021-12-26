@@ -268,8 +268,7 @@ class LookupModule(LookupBase):
                         credentials[cred_key] = cred_val
                         cred_map[cred_key] = label
 
-            ret = [credentials]
-            return ret
+            return [credentials]
         except ApiError as e:
             raise AnsibleError('API Error: {0}'.format(str(e)))
         except AnsibleError as e:

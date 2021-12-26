@@ -724,11 +724,7 @@ def modify_instance(module, instance):
     if not host_name:
         host_name = instance.host_name
 
-    # password can be modified only when restart instance
-    password = ""
-    if state == "restarted":
-        password = module.params['password']
-
+    password = module.params['password'] if state == "restarted" else ""
     # userdata can be modified only when instance is stopped
     setattr(instance, "user_data", instance.describe_user_data())
     user_data = instance.user_data
@@ -748,10 +744,11 @@ def wait_for_instance_modify_charge(ecs, instance_ids, charge_type, delay=10, ti
     try:
         while True:
             instances = ecs.describe_instances(instance_ids=instance_ids)
-            flag = True
-            for inst in instances:
-                if inst and inst.instance_charge_type != charge_type:
-                    flag = False
+            flag = not any(
+                inst and inst.instance_charge_type != charge_type
+                for inst in instances
+            )
+
             if flag:
                 return
             timeout -= delay
@@ -866,7 +863,7 @@ def main():
     if state == 'present':
         if not instance_ids:
             if len(instances) > count:
-                for i in range(0, len(instances) - count):
+                for _ in range(len(instances) - count):
                     inst = instances[len(instances) - 1]
                     if inst.status != 'stopped' and not force:
                         module.fail_json(msg="That to delete instance {0} is failed results from it is running, "
@@ -962,10 +959,7 @@ def main():
                 module.fail_json(msg='Start instances got an error: {0}'.format(e))
         elif state == 'stopped':
             try:
-                targets = []
-                for inst in instances:
-                    if inst.status != "stopped":
-                        targets.append(inst.id)
+                targets = [inst.id for inst in instances if inst.status != "stopped"]
                 if targets and ecs.stop_instances(instance_ids=targets, force_stop=force):
                     changed = True
                     ids.extend(targets)

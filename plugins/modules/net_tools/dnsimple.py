@@ -306,8 +306,9 @@ class DNSimpleV2():
     def update_record(self, domain, rid, ttl=None, priority=None):
         """update a single dns ressource record"""
         zr = ZoneRecordUpdateInput(ttl=ttl, priority=priority)
-        result = self.client.zones.update_record(self.account.id, str(domain), str(rid), zr).data.__dict__
-        return result
+        return self.client.zones.update_record(
+            self.account.id, str(domain), str(rid), zr
+        ).data.__dict__
 
     def create_record(self, domain, name, record_type, content, ttl=None, priority=None):
         """create a single dns ressource record"""
@@ -412,29 +413,23 @@ def main():
 
         # Domain & No record
         if record is None and not record_ids:
-            if domain.isdigit():
-                typed_domain = int(domain)
-            else:
-                typed_domain = str(domain)
+            typed_domain = int(domain) if domain.isdigit() else str(domain)
             dr = ds.get_domain(typed_domain)
             # domain does not exist
             if state == 'present':
                 if dr:
                     module.exit_json(changed=False, result=dr)
-                else:
-                    if module.check_mode:
-                        module.exit_json(changed=True)
-                    else:
-                        response = ds.create_domain(domain)
-                        module.exit_json(changed=True, result=response)
-            # state is absent
-            else:
-                if dr:
-                    if not module.check_mode:
-                        ds.delete_domain(domain)
+                elif module.check_mode:
                     module.exit_json(changed=True)
                 else:
-                    module.exit_json(changed=False)
+                    response = ds.create_domain(domain)
+                    module.exit_json(changed=True, result=response)
+            elif dr:
+                if not module.check_mode:
+                    ds.delete_domain(domain)
+                module.exit_json(changed=True)
+            else:
+                module.exit_json(changed=False)
 
         # need the not none check since record could be an empty string
         if record is not None:
@@ -459,29 +454,24 @@ def main():
                         changed = True
                 if rr:
                     # check if we need to update
-                    if rr['ttl'] != ttl or rr['priority'] != priority:
-                        if module.check_mode:
-                            module.exit_json(changed=True)
-                        else:
-                            response = ds.update_record(domain, rr['id'], ttl, priority)
-                            module.exit_json(changed=True, result=response)
-                    else:
+                    if rr['ttl'] == ttl and rr['priority'] == priority:
                         module.exit_json(changed=changed, result=rr)
-                else:
-                    # create it
-                    if module.check_mode:
+                    elif module.check_mode:
                         module.exit_json(changed=True)
                     else:
-                        response = ds.create_record(domain, record, record_type, value, ttl, priority)
+                        response = ds.update_record(domain, rr['id'], ttl, priority)
                         module.exit_json(changed=True, result=response)
-            # state is absent
-            else:
-                if rr:
-                    if not module.check_mode:
-                        ds.delete_record(domain, rr['id'])
+                elif module.check_mode:
                     module.exit_json(changed=True)
                 else:
-                    module.exit_json(changed=False)
+                    response = ds.create_record(domain, record, record_type, value, ttl, priority)
+                    module.exit_json(changed=True, result=response)
+            elif rr:
+                if not module.check_mode:
+                    ds.delete_record(domain, rr['id'])
+                module.exit_json(changed=True)
+            else:
+                module.exit_json(changed=False)
 
         # Make sure these record_ids either all exist or none
         if record_ids:

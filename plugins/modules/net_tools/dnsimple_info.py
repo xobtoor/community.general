@@ -245,8 +245,7 @@ def build_url(account, key, is_sandbox):
     url = 'https://api{sandbox}.dnsimple.com/'.format(
         sandbox=".sandbox" if is_sandbox else "") + 'v2/' + account
     req = Request(url=url, headers=headers)
-    prepped_request = req.prepare()
-    return prepped_request
+    return req.prepare()
 
 
 def iterate_data(module, request_object):
@@ -291,10 +290,6 @@ def main():
         "sandbox": {"required": False, "type": "bool", "default": False}
     }
 
-    result = {
-        'changed': False
-    }
-
     module = AnsibleModule(
         argument_spec=fields,
         supports_check_mode=True
@@ -313,20 +308,21 @@ def main():
 
     # At minimum we need account and key
     if params['account_id'] and params['api_key']:
+        result = {
+            'changed': False
+        }
+
         # If we have a record return info on that record
         if params['name'] and params['record']:
             result['dnsimple_record_info'] = record_info(module, req)
-            module.exit_json(**result)
-
-            # If we have the account only and domain, return records for the domain
+                    # If we have the account only and domain, return records for the domain
         elif params['name']:
             result['dnsimple_records_info'] = domain_info(module, req)
-            module.exit_json(**result)
-
-            # If we have the account only, return domains
+                    # If we have the account only, return domains
         else:
             result['dnsimple_domain_info'] = account_info(module, req)
-            module.exit_json(**result)
+        module.exit_json(**result)
+
     else:
         module.fail_json(msg="Need at least account_id and api_key")
 

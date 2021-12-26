@@ -295,15 +295,13 @@ class ClcGroup(object):
         Define the argument spec for the ansible module
         :return: argument spec dictionary
         """
-        argument_spec = dict(
+        return dict(
             name=dict(required=True),
             description=dict(default=None),
             parent=dict(default=None),
             location=dict(default=None),
             state=dict(default='present', choices=['present', 'absent']),
             wait=dict(type='bool', default=True))
-
-        return argument_spec
 
     def _set_clc_credentials_from_env(self):
         """
@@ -397,7 +395,7 @@ class ClcGroup(object):
         if parent_exists and child_exists:
             group, parent = self.group_dict[group_name]
             changed = False
-        elif parent_exists and not child_exists:
+        elif parent_exists:
             if not self.module.check_mode:
                 group = self._create_group(
                     group=group,

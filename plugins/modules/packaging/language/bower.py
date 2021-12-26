@@ -106,47 +106,47 @@ class Bower(object):
             self.name_version = self.name
 
     def _exec(self, args, run_in_check_mode=False, check_rc=True):
-        if not self.module.check_mode or (self.module.check_mode and run_in_check_mode):
-            cmd = []
+        if self.module.check_mode and not run_in_check_mode:
+            return ''
+        cmd = []
 
-            if self.relative_execpath:
-                cmd.append(os.path.join(self.path, self.relative_execpath, "bower"))
-                if not os.path.isfile(cmd[-1]):
-                    self.module.fail_json(msg="bower not found at relative path %s" % self.relative_execpath)
-            else:
-                cmd.append("bower")
+        if self.relative_execpath:
+            cmd.append(os.path.join(self.path, self.relative_execpath, "bower"))
+            if not os.path.isfile(cmd[-1]):
+                self.module.fail_json(msg="bower not found at relative path %s" % self.relative_execpath)
+        else:
+            cmd.append("bower")
 
-            cmd.extend(args)
-            cmd.extend(['--config.interactive=false', '--allow-root'])
+        cmd.extend(args)
+        cmd.extend(['--config.interactive=false', '--allow-root'])
 
-            if self.name:
-                cmd.append(self.name_version)
+        if self.name:
+            cmd.append(self.name_version)
 
-            if self.offline:
-                cmd.append('--offline')
+        if self.offline:
+            cmd.append('--offline')
 
-            if self.production:
-                cmd.append('--production')
+        if self.production:
+            cmd.append('--production')
 
-            # If path is specified, cd into that path and run the command.
-            cwd = None
-            if self.path:
-                if not os.path.exists(self.path):
-                    os.makedirs(self.path)
-                if not os.path.isdir(self.path):
-                    self.module.fail_json(msg="path %s is not a directory" % self.path)
-                cwd = self.path
+        # If path is specified, cd into that path and run the command.
+        cwd = None
+        if self.path:
+            if not os.path.exists(self.path):
+                os.makedirs(self.path)
+            if not os.path.isdir(self.path):
+                self.module.fail_json(msg="path %s is not a directory" % self.path)
+            cwd = self.path
 
-            rc, out, err = self.module.run_command(cmd, check_rc=check_rc, cwd=cwd)
-            return out
-        return ''
+        rc, out, err = self.module.run_command(cmd, check_rc=check_rc, cwd=cwd)
+        return out
 
     def list(self):
         cmd = ['list', '--json']
 
-        installed = list()
-        missing = list()
-        outdated = list()
+        installed = []
+        missing = []
+        outdated = []
         data = json.loads(self._exec(cmd, True, False))
         if 'dependencies' in data:
             for dep in data['dependencies']:

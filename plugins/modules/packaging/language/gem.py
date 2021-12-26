@@ -139,11 +139,11 @@ from ansible.module_utils.basic import AnsibleModule
 
 
 def get_rubygems_path(module):
-    if module.params['executable']:
-        result = module.params['executable'].split(' ')
-    else:
-        result = [module.get_bin_path('gem', True)]
-    return result
+    return (
+        module.params['executable'].split(' ')
+        if module.params['executable']
+        else [module.get_bin_path('gem', True)]
+    )
 
 
 def get_rubygems_version(module):
@@ -202,9 +202,8 @@ def exists(module):
     if module.params['version']:
         if module.params['version'] in installed_versions:
             return True
-    else:
-        if installed_versions:
-            return True
+    elif installed_versions:
+        return True
     return False
 
 
@@ -255,9 +254,8 @@ def install(module):
         cmd.extend(['--source', module.params['repository']])
     if not module.params['include_dependencies']:
         cmd.append('--ignore-dependencies')
-    else:
-        if ver and ver < (2, 0, 0):
-            cmd.append('--include-dependencies')
+    elif ver and ver < (2, 0, 0):
+        cmd.append('--include-dependencies')
     if module.params['user_install']:
         cmd.append('--user-install')
     else:
@@ -330,9 +328,7 @@ def main():
             uninstall(module)
             changed = True
 
-    result = {}
-    result['name'] = module.params['name']
-    result['state'] = module.params['state']
+    result = {'name': module.params['name'], 'state': module.params['state']}
     if module.params['version']:
         result['version'] = module.params['version']
     result['changed'] = changed

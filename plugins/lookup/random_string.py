@@ -202,9 +202,9 @@ class LookupModule(LookupBase):
                 "min_special": special_chars,
             }
 
-            for m in mapping:
+            for m, value in mapping.items():
                 if self.get_option(m):
-                    values += self.get_random(random_generator, mapping[m], self.get_option(m))
+                    values += self.get_random(random_generator, value, self.get_option(m))
 
         remaining_pass_len = length - len(values)
         values += self.get_random(random_generator, available_chars_set, remaining_pass_len)

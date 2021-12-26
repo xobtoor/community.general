@@ -98,7 +98,7 @@ def core(module):
     rc = 0
 
     if backend:
-        if state == 'present' or state == 'latest':
+        if state in ['present', 'latest']:
             args = [atomic_bin, 'pull', "--storage=%s" % backend, image]
             rc, out, err = module.run_command(args, check_rc=False)
             if rc < 0:
@@ -123,7 +123,7 @@ def core(module):
                 module.exit_json(msg=out, changed=changed)
         return
 
-    if state == 'present' or state == 'latest':
+    if state in ['present', 'latest']:
         if state == 'latest':
             is_upgraded = do_upgrade(module, image)
 

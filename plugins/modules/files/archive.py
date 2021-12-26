@@ -190,22 +190,16 @@ from ansible.module_utils import six
 
 
 LZMA_IMP_ERR = None
-if six.PY3:
-    try:
+try:
+    if six.PY3:
         import lzma
-        HAS_LZMA = True
-    except ImportError:
-        LZMA_IMP_ERR = format_exc()
-        HAS_LZMA = False
-else:
-    try:
+    else:
         from backports import lzma
-        HAS_LZMA = True
-    except ImportError:
-        LZMA_IMP_ERR = format_exc()
-        HAS_LZMA = False
-
-PY27 = version_info[0:2] >= (2, 7)
+    HAS_LZMA = True
+except ImportError:
+    LZMA_IMP_ERR = format_exc()
+    HAS_LZMA = False
+PY27 = version_info[:2] >= (2, 7)
 
 STATE_ABSENT = 'absent'
 STATE_ARCHIVED = 'archive'
@@ -529,7 +523,7 @@ class ZipArchive(Archive):
     def _get_checksums(self, path):
         try:
             archive = zipfile.ZipFile(_to_native_ascii(path), 'r')
-            checksums = set((info.filename, info.CRC) for info in archive.infolist())
+            checksums = {(info.filename, info.CRC) for info in archive.infolist()}
             archive.close()
         except zipfile.BadZipfile:
             checksums = set()
@@ -585,11 +579,11 @@ class TarArchive(Archive):
             if self.format == 'xz':
                 with lzma.open(_to_native_ascii(path), 'r') as f:
                     archive = tarfile.open(fileobj=f)
-                    checksums = set((info.name, info.chksum) for info in archive.getmembers())
+                    checksums = {(info.name, info.chksum) for info in archive.getmembers()}
                     archive.close()
             else:
                 archive = tarfile.open(_to_native_ascii(path), 'r|' + self.format)
-                checksums = set((info.name, info.chksum) for info in archive.getmembers())
+                checksums = {(info.name, info.chksum) for info in archive.getmembers()}
                 archive.close()
         except (lzma.LZMAError, tarfile.ReadError, tarfile.CompressionError):
             try:
@@ -647,16 +641,15 @@ def main():
             archive.changed |= archive.is_different_from_original()
             if archive.remove:
                 archive.remove_targets()
+    elif check_mode:
+        if not archive.destination_exists():
+            archive.changed = True
     else:
-        if check_mode:
-            if not archive.destination_exists():
-                archive.changed = True
-        else:
-            path = archive.paths[0]
-            archive.add_single_target(path)
-            archive.changed |= archive.is_different_from_original()
-            if archive.remove:
-                archive.remove_single_target(path)
+        path = archive.paths[0]
+        archive.add_single_target(path)
+        archive.changed |= archive.is_different_from_original()
+        if archive.remove:
+            archive.remove_single_target(path)
 
     if archive.destination_exists():
         archive.update_permissions()

@@ -204,11 +204,7 @@ class DimensionDataModule(object):
                 if vlan.name == locator
             ]
 
-            if matching_vlans:
-                vlan = matching_vlans[0]
-            else:
-                vlan = None
-
+            vlan = matching_vlans[0] if matching_vlans else None
         if vlan:
             return vlan
 
@@ -312,10 +308,7 @@ def get_dd_regions():
     # Get endpoints
     all_regions = API_ENDPOINTS.keys()
 
-    # Only Dimension Data endpoints (no prefix)
-    regions = [region[3:] for region in all_regions if region.startswith('dd-')]
-
-    return regions
+    return [region[3:] for region in all_regions if region.startswith('dd-')]
 
 
 def is_uuid(u, version=4):

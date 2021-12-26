@@ -184,16 +184,13 @@ def _fs_exists(module, filesystem):
     """
     lsfs_cmd = module.get_bin_path('lsfs', True)
     rc, lsfs_out, err = module.run_command([lsfs_cmd, "-l", filesystem])
-    if rc == 1:
-        if re.findall("No record matching", err):
-            return False
-
-        else:
-            module.fail_json(msg="Failed to run lsfs. Error message: %s" % err)
+    if rc != 1:
+        return True
+    if re.findall("No record matching", err):
+        return False
 
     else:
-
-        return True
+        module.fail_json(msg="Failed to run lsfs. Error message: %s" % err)
 
 
 def _check_nfs_device(module, nfs_host, device):
@@ -211,11 +208,7 @@ def _check_nfs_device(module, nfs_host, device):
         module.fail_json(msg="Failed to run showmount. Error message: %s" % err)
     else:
         showmount_data = showmount_out.splitlines()
-        for line in showmount_data:
-            if line.split(':')[1] == device:
-                return True
-
-        return False
+        return any(line.split(':')[1] == device for line in showmount_data)
 
 
 def _validate_vg(module, vg):
@@ -265,11 +258,7 @@ def resize_fs(module, filesystem, size):
                 module.fail_json(msg="Failed to run chfs. Error message: %s" % err)
 
         else:
-            if re.findall('The filesystem size is already', chfs_out):
-                changed = False
-            else:
-                changed = True
-
+            changed = not re.findall('The filesystem size is already', chfs_out)
             return changed, chfs_out
     else:
         changed = True
@@ -303,16 +292,8 @@ def create_fs(
             False: '-A no'
         }
 
-    if size is None:
-        size = ''
-    else:
-        size = "-a size=%s" % size
-
-    if device is None:
-        device = ''
-    else:
-        device = "-d %s" % device
-
+    size = '' if size is None else "-a size=%s" % size
+    device = '' if device is None else "-d %s" % device
     if vg is None:
         vg = ''
     else:
@@ -324,12 +305,7 @@ def create_fs(
 
             return changed, msg
 
-    if mount_group is None:
-        mount_group = ''
-
-    else:
-        mount_group = "-u %s" % mount_group
-
+    mount_group = '' if mount_group is None else "-u %s" % mount_group
     auto_mount = auto_mount_opt[auto_mount]
     account_subsystem = account_subsys_opt[account_subsystem]
 
@@ -499,18 +475,14 @@ def main():
             if size is not None:
                 result['changed'], result['msg'] = resize_fs(module, filesystem, size)
 
-        # If fs doesn't exist, create it.
         else:
-            # Check if fs will be a NFS device.
             if nfs_server is not None:
                 if device is None:
                     result['msg'] = 'Parameter "device" is required when "nfs_server" is defined.'
                     module.fail_json(**result)
-                else:
-                    # Create a fs from NFS export.
-                    if _check_nfs_device(module, nfs_server, device):
-                        result['changed'], result['msg'] = create_fs(
-                            module, fs_type, filesystem, vg, device, size, mount_group, auto_mount, account_subsystem, permissions, nfs_server, attributes)
+                elif _check_nfs_device(module, nfs_server, device):
+                    result['changed'], result['msg'] = create_fs(
+                        module, fs_type, filesystem, vg, device, size, mount_group, auto_mount, account_subsystem, permissions, nfs_server, attributes)
 
             if device is None:
                 if vg is None:

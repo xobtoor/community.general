@@ -216,7 +216,7 @@ class ClcFirewallPolicy:
         Define the argument spec for the ansible module
         :return: argument spec dictionary
         """
-        argument_spec = dict(
+        return dict(
             location=dict(required=True),
             source_account_alias=dict(required=True),
             destination_account_alias=dict(),
@@ -228,7 +228,6 @@ class ClcFirewallPolicy:
             state=dict(default='present', choices=['present', 'absent']),
             enabled=dict(default=True, choices=[True, False])
         )
-        return argument_spec
 
     def process_request(self):
         """
@@ -286,8 +285,7 @@ class ClcFirewallPolicy:
         url = response.get('links')[0]['href']
         path = urlparse(url).path
         path_list = os.path.split(path)
-        policy_id = path_list[-1]
-        return policy_id
+        return path_list[-1]
 
     def _set_clc_credentials_from_env(self):
         """

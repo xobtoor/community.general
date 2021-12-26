@@ -350,7 +350,7 @@ def main():
         diversion_after = diversion_state(module, DPKG_DIVERT, path)
 
     diversion = diversion_after.copy()
-    diff = dict()
+    diff = {}
     if module._diff:
         diff['before'] = diversion_before
         diff['after'] = diversion_after

@@ -220,9 +220,8 @@ APACHE_VERSION_EXPRESSION = r"SERVER VERSION: APACHE/([\d.]+)"
 def regexp_extraction(string, _regexp, groups=1):
     """ Returns the capture group (default=1) specified in the regexp, applied to the string """
     regexp_search = re.search(string=str(string), pattern=str(_regexp))
-    if regexp_search:
-        if regexp_search.group(groups) != '':
-            return str(regexp_search.group(groups))
+    if regexp_search and regexp_search.group(groups) != '':
+        return str(regexp_search.group(groups))
     return None
 
 
@@ -269,7 +268,7 @@ class BalancerMember(object):
                 for valuesset in subsoup[1::1]:
                     if re.search(pattern=self.host, string=str(valuesset)):
                         values = valuesset.findAll('td')
-                        return dict((keys[x].string, values[x].string) for x in range(0, len(keys)))
+                        return {keys[x].string: values[x].string for x in range(len(keys))}
 
     def get_member_status(self):
         """ Returns a dictionary of a balancer member's status attributes."""
@@ -278,8 +277,9 @@ class BalancerMember(object):
                           'hot_standby': 'Stby',
                           'ignore_errors': 'Ign'}
         actual_status = str(self.attributes['Status'])
-        status = dict((mode, patt in actual_status) for mode, patt in iteritems(status_mapping))
-        return status
+        return {
+            mode: patt in actual_status for mode, patt in iteritems(status_mapping)
+        }
 
     def set_member_status(self, values):
         """ Sets a balancer member's status attributes amongst pre-mapped values."""
@@ -383,9 +383,7 @@ def main():
                           tls=module.params['tls'])
 
     if module.params['member_host'] is None:
-        json_output_list = []
-        for member in mybalancer.members:
-            json_output_list.append({
+        json_output_list = [{
                 "host": member.host,
                 "status": member.status,
                 "protocol": member.protocol,
@@ -394,7 +392,7 @@ def main():
                 "attributes": member.attributes,
                 "management_url": member.management_url,
                 "balancer_url": member.balancer_url
-            })
+            } for member in mybalancer.members]
         module.exit_json(
             changed=False,
             members=json_output_list
@@ -403,13 +401,10 @@ def main():
         changed = False
         member_exists = False
         member_status = {'disabled': False, 'drained': False, 'hot_standby': False, 'ignore_errors': False}
-        for mode in member_status.keys():
+        for mode in member_status:
             for state in states:
-                if mode == state:
+                if mode == state or mode == 'disabled' and state == 'absent':
                     member_status[mode] = True
-                elif mode == 'disabled' and state == 'absent':
-                    member_status[mode] = True
-
         for member in mybalancer.members:
             if str(member.host) == str(module.params['member_host']):
                 member_exists = True

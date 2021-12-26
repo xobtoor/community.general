@@ -159,7 +159,7 @@ def main():
     url = module.params['url']
 
     # Build the common request body
-    body = dict()
+    body = {}
     for k in ('component', 'version', 'hosts'):
         v = module.params[k]
         if v is not None:
@@ -183,11 +183,7 @@ def main():
         if message is not None:
             body['errorMessage'] = message
 
-        if state == 'finished':
-            body['status'] = 'success'
-        else:
-            body['status'] = 'failure'
-
+        body['status'] = 'success' if state == 'finished' else 'failure'
         request_url = url + '/data/events/deployments/end'
 
     # Build the deployment object we return

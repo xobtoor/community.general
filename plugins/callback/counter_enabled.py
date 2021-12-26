@@ -68,11 +68,7 @@ class CallbackModule(CallbackBase):
 
     def v2_playbook_on_play_start(self, play):
         name = play.get_name().strip()
-        if not name:
-            msg = u"play"
-        else:
-            msg = u"PLAY [%s]" % name
-
+        msg = u"play" if not name else u"PLAY [%s]" % name
         self._play = play
 
         self._display.banner(msg)
@@ -204,16 +200,15 @@ class CallbackModule(CallbackBase):
         if result._task.loop and 'results' in result._result:
             self._process_items(result)
 
+        elif delegated_vars:
+            self._display.display("fatal: %d/%d [%s -> %s]: FAILED! => %s" % (self._host_counter, self._host_total,
+                                                                              result._host.get_name(), delegated_vars['ansible_host'],
+                                                                              self._dump_results(result._result)),
+                                  color=C.COLOR_ERROR)
         else:
-            if delegated_vars:
-                self._display.display("fatal: %d/%d [%s -> %s]: FAILED! => %s" % (self._host_counter, self._host_total,
-                                                                                  result._host.get_name(), delegated_vars['ansible_host'],
-                                                                                  self._dump_results(result._result)),
-                                      color=C.COLOR_ERROR)
-            else:
-                self._display.display("fatal: %d/%d [%s]: FAILED! => %s" % (self._host_counter, self._host_total,
-                                                                            result._host.get_name(), self._dump_results(result._result)),
-                                      color=C.COLOR_ERROR)
+            self._display.display("fatal: %d/%d [%s]: FAILED! => %s" % (self._host_counter, self._host_total,
+                                                                        result._host.get_name(), self._dump_results(result._result)),
+                                  color=C.COLOR_ERROR)
 
         if ignore_errors:
             self._display.display("...ignoring", color=C.COLOR_SKIP)

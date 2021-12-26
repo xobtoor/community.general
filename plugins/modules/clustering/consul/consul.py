@@ -320,7 +320,7 @@ def add_service(module, service):
 
     # there is no way to retrieve the details of checks so if a check is present
     # in the service it must be re-registered
-    if service.has_checks() or not existing or not existing == service:
+    if service.has_checks() or not existing or existing != service:
 
         service.register(consul_api)
         # check that it registered correctly

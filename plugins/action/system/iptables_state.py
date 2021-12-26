@@ -59,7 +59,7 @@ class ActionModule(ActionBase):
             return async_action.run(task_vars=task_vars)
 
         # At least one iteration is required, even if timeout is 0.
-        for dummy in range(max(1, timeout)):
+        for _ in range(max(1, timeout)):
             async_result = async_action.run(task_vars=task_vars)
             if async_result.get('finished', 0) == 1:
                 break

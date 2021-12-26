@@ -204,16 +204,13 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
                 if 'data' not in json:
                     # /hosts/:id does not have a 'data' key
                     data = json
-                    break
                 elif isinstance(json['data'], MutableMapping):
                     # /facts are returned as dict in 'data'
                     data = json['data']
-                    break
                 else:
                     # /hosts 's 'results' is a list of all hosts, returned is paginated
                     data = data + json['data']
-                    break
-
+                break
             self._cache[self.cache_key][url] = data
 
         return self._cache[self.cache_key][url]
@@ -454,9 +451,8 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
                 self.inventory.add_group(pool_group)
 
                 for member in self._get_members_per_pool(pool['poolid']):
-                    if member.get('name'):
-                        if not member.get('template'):
-                            self.inventory.add_child(pool_group, member['name'])
+                    if member.get('name') and not member.get('template'):
+                        self.inventory.add_child(pool_group, member['name'])
 
     def parse(self, inventory, loader, path, cache=True):
         if not HAS_REQUESTS:

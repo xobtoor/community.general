@@ -156,11 +156,7 @@ class Device(object):
         # find mountpoint
         rc, mountpoint, dummy = self.module.run_command([cmd_findmnt, "--mtab", "--noheadings", "--output",
                                                         "TARGET", "--source", self.path], check_rc=False)
-        if rc != 0:
-            mountpoint = None
-        else:
-            mountpoint = mountpoint.split('\n')[0]
-
+        mountpoint = None if rc != 0 else mountpoint.split('\n')[0]
         return mountpoint
 
     def __str__(self):
@@ -302,10 +298,7 @@ class XFS(Filesystem):
         # able to query info from the mountpoint. So try it first, and use
         # device as the last resort: it may or may not work.
         mountpoint = dev.get_mountpoint()
-        if mountpoint:
-            cmdline += [mountpoint]
-        else:
-            cmdline += [str(dev)]
+        cmdline += [mountpoint] if mountpoint else [str(dev)]
         dummy, out, dummy = self.module.run_command(cmdline, check_rc=True, environ_update=self.LANG_ENV)
 
         block_size = block_count = None
@@ -367,11 +360,10 @@ class F2fs(Filesystem):
         # Looking for "	F2FS-tools: mkfs.f2fs Ver: 1.10.0 (2018-01-30)"
         # mkfs.f2fs displays version since v1.2.0
         match = re.search(r"F2FS-tools: mkfs.f2fs Ver: ([0-9.]+) \(", out)
-        if match is not None:
-            # Since 1.9.0, mkfs.f2fs check overwrite before make filesystem
-            # before that version -f switch wasn't used
-            if LooseVersion(match.group(1)) >= LooseVersion('1.9.0'):
-                self.MKFS_FORCE_FLAGS = ['-f']
+        if match is not None and LooseVersion(match.group(1)) >= LooseVersion(
+            '1.9.0'
+        ):
+            self.MKFS_FORCE_FLAGS = ['-f']
 
     def get_fs_size(self, dev):
         """Get sector size and total FS sectors and return their product."""
@@ -400,10 +392,7 @@ class VFAT(Filesystem):
 
     def __init__(self, module):
         super(VFAT, self).__init__(module)
-        if platform.system() == 'FreeBSD':
-            self.MKFS = 'newfs_msdos'
-        else:
-            self.MKFS = 'mkfs.vfat'
+        self.MKFS = 'newfs_msdos' if platform.system() == 'FreeBSD' else 'mkfs.vfat'
 
     def get_fs_size(self, dev):
         """Get and return size of filesystem, in bytes."""
@@ -431,8 +420,7 @@ class LVM(Filesystem):
         """Get and return PV size, in bytes."""
         cmd = self.module.get_bin_path(self.INFO, required=True)
         dummy, size, dummy = self.module.run_command([cmd, '--noheadings', '-o', 'pv_size', '--units', 'b', '--nosuffix', str(dev)], check_rc=True)
-        pv_size = int(size)
-        return pv_size
+        return int(size)
 
 
 class Swap(Filesystem):
@@ -512,10 +500,7 @@ def main():
     force = module.params['force']
     resizefs = module.params['resizefs']
 
-    mkfs_opts = []
-    if opts is not None:
-        mkfs_opts = opts.split()
-
+    mkfs_opts = opts.split() if opts is not None else []
     changed = False
 
     if not os.path.exists(dev):

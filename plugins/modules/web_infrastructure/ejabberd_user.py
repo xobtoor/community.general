@@ -175,11 +175,7 @@ def main():
         if rc is not None and rc != 0:
             module.fail_json(msg=err, rc=rc)
 
-    if rc is None:
-        result['changed'] = False
-    else:
-        result['changed'] = True
-
+    result['changed'] = rc is not None
     module.exit_json(**result)
 
 

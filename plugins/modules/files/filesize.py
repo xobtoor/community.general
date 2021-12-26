@@ -258,9 +258,8 @@ def bytes_to_human(size, iec=False):
         if iec:
             if 'i' not in u or size / v >= 1024:
                 continue
-        else:
-            if v % 5 or size / v >= 1000:
-                continue
+        elif v % 5 or size / v >= 1000:
+            continue
         unit = u
 
     hsize = round(size / SIZE_UNITS[unit], 2)
@@ -312,17 +311,16 @@ def split_size_unit(string, isint=False):
     """
     unit = re.sub(r'(\d|\.)', r'', string).strip()
     value = float(re.sub(r'%s' % unit, r'', string).strip())
-    if isint and unit in ('B', ''):
-        if int(value) != value:
-            raise AssertionError("invalid blocksize value: bytes require an integer value")
+    if isint and unit in ('B', '') and int(value) != value:
+        raise AssertionError("invalid blocksize value: bytes require an integer value")
 
     if not unit:
         unit = None
         product = int(round(value))
+    elif unit not in SIZE_UNITS.keys():
+        raise AssertionError("invalid size unit (%s): unit must be one of %s, or none." %
+                             (unit, ', '.join(sorted(SIZE_UNITS, key=SIZE_UNITS.get))))
     else:
-        if unit not in SIZE_UNITS.keys():
-            raise AssertionError("invalid size unit (%s): unit must be one of %s, or none." %
-                                 (unit, ', '.join(sorted(SIZE_UNITS, key=SIZE_UNITS.get))))
         product = int(round(value * SIZE_UNITS[unit]))
     return value, unit, product
 
@@ -377,7 +375,7 @@ def complete_dd_cmdline(args, dd_cmd):
         return list()
 
     bs = args['size_spec']['blocksize']
-    conv = list()
+    conv = []
 
     # For sparse files (create, truncate, grow): write count=0 block.
     if args['sparse']:

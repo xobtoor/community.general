@@ -264,12 +264,7 @@ class DconfPreference(object):
                                   out=out,
                                   err=err)
 
-        if out == '':
-            value = None
-        else:
-            value = out.rstrip('\n')
-
-        return value
+        return None if out == '' else out.rstrip('\n')
 
     def write(self, key, value):
         """

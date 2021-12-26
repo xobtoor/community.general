@@ -424,9 +424,8 @@ class CloudflareAPI(object):
         if not self.record.endswith(self.zone):
             self.record = self.record + '.' + self.zone
 
-        if (self.type == 'DS'):
-            if self.record == self.zone:
-                self.module.fail_json(msg="DS records only apply to subdomains.")
+        if (self.type == 'DS') and self.record == self.zone:
+            self.module.fail_json(msg="DS records only apply to subdomains.")
 
     def _cf_simple_api_call(self, api_call, method='GET', payload=None):
         if self.api_token:
@@ -551,9 +550,7 @@ class CloudflareAPI(object):
     def get_zones(self, name=None):
         if not name:
             name = self.zone
-        param = ''
-        if name:
-            param = '?' + urlencode({'name': name})
+        param = '?' + urlencode({'name': name}) if name else ''
         zones, status = self._cf_api_call('/zones' + param)
         return zones
 
@@ -585,41 +582,53 @@ class CloudflareAPI(object):
         return records
 
     def delete_dns_records(self, **kwargs):
-        params = {}
-        for param in ['port', 'proto', 'service', 'solo', 'type', 'record', 'value', 'weight', 'zone',
-                      'algorithm', 'cert_usage', 'hash_type', 'selector', 'key_tag']:
-            if param in kwargs:
-                params[param] = kwargs[param]
-            else:
-                params[param] = getattr(self, param)
+        params = {
+            param: kwargs[param] if param in kwargs else getattr(self, param)
+            for param in [
+                'port',
+                'proto',
+                'service',
+                'solo',
+                'type',
+                'record',
+                'value',
+                'weight',
+                'zone',
+                'algorithm',
+                'cert_usage',
+                'hash_type',
+                'selector',
+                'key_tag',
+            ]
+        }
 
         records = []
         content = params['value']
         search_record = params['record']
         if params['type'] == 'SRV':
-            if not (params['value'] is None or params['value'] == ''):
+            if params['value'] is not None and params['value'] != '':
                 content = str(params['weight']) + '\t' + str(params['port']) + '\t' + params['value']
             search_record = params['service'] + '.' + params['proto'] + '.' + params['record']
         elif params['type'] == 'DS':
-            if not (params['value'] is None or params['value'] == ''):
+            if params['value'] is not None and params['value'] != '':
                 content = str(params['key_tag']) + '\t' + str(params['algorithm']) + '\t' + str(params['hash_type']) + '\t' + params['value']
         elif params['type'] == 'SSHFP':
-            if not (params['value'] is None or params['value'] == ''):
+            if params['value'] is not None and params['value'] != '':
                 content = str(params['algorithm']) + '\t' + str(params['hash_type']) + '\t' + params['value']
         elif params['type'] == 'TLSA':
-            if not (params['value'] is None or params['value'] == ''):
+            if params['value'] is not None and params['value'] != '':
                 content = str(params['cert_usage']) + '\t' + str(params['selector']) + '\t' + str(params['hash_type']) + '\t' + params['value']
             search_record = params['port'] + '.' + params['proto'] + '.' + params['record']
-        if params['solo']:
-            search_value = None
-        else:
-            search_value = content
-
+        search_value = None if params['solo'] else content
         records = self.get_dns_records(params['zone'], params['type'], search_record, search_value)
 
         for rr in records:
             if params['solo']:
-                if not ((rr['type'] == params['type']) and (rr['name'] == search_record) and (rr['content'] == content)):
+                if (
+                    rr['type'] != params['type']
+                    or rr['name'] != search_record
+                    or rr['content'] != content
+                ):
                     self.changed = True
                     if not self.module.check_mode:
                         result, info = self._cf_api_call('/zones/{0}/dns_records/{1}'.format(rr['zone_id'], rr['id']), 'DELETE')
@@ -630,13 +639,27 @@ class CloudflareAPI(object):
         return self.changed
 
     def ensure_dns_record(self, **kwargs):
-        params = {}
-        for param in ['port', 'priority', 'proto', 'proxied', 'service', 'ttl', 'type', 'record', 'value', 'weight', 'zone',
-                      'algorithm', 'cert_usage', 'hash_type', 'selector', 'key_tag']:
-            if param in kwargs:
-                params[param] = kwargs[param]
-            else:
-                params[param] = getattr(self, param)
+        params = {
+            param: kwargs[param] if param in kwargs else getattr(self, param)
+            for param in [
+                'port',
+                'priority',
+                'proto',
+                'proxied',
+                'service',
+                'ttl',
+                'type',
+                'record',
+                'value',
+                'weight',
+                'zone',
+                'algorithm',
+                'cert_usage',
+                'hash_type',
+                'selector',
+                'key_tag',
+            ]
+        }
 
         search_value = params['value']
         search_record = params['record']
@@ -764,20 +787,22 @@ class CloudflareAPI(object):
                 do_update = True
             if ('proxied' in new_record) and ('proxied' in cur_record) and (cur_record['proxied'] != params['proxied']):
                 do_update = True
-            if ('data' in new_record) and ('data' in cur_record):
-                if (cur_record['data'] != new_record['data']):
-                    do_update = True
+            if (
+                ('data' in new_record)
+                and ('data' in cur_record)
+                and (cur_record['data'] != new_record['data'])
+            ):
+                do_update = True
             if (params['type'] == 'CNAME') and (cur_record['content'] != new_record['content']):
                 do_update = True
-            if do_update:
-                if self.module.check_mode:
-                    result = new_record
-                else:
-                    result, info = self._cf_api_call('/zones/{0}/dns_records/{1}'.format(zone_id, records[0]['id']), 'PUT', new_record)
-                self.changed = True
-                return result, self.changed
-            else:
+            if not do_update:
                 return records, self.changed
+            if self.module.check_mode:
+                result = new_record
+            else:
+                result, info = self._cf_api_call('/zones/{0}/dns_records/{1}'.format(zone_id, records[0]['id']), 'PUT', new_record)
+            self.changed = True
+            return result, self.changed
         if self.module.check_mode:
             result = new_record
         else:
@@ -826,35 +851,78 @@ def main():
         ],
     )
 
-    if not module.params['api_token'] and not (module.params['account_api_key'] and module.params['account_email']):
+    if not module.params['api_token'] and (
+        not module.params['account_api_key']
+        or not module.params['account_email']
+    ):
         module.fail_json(msg="Either api_token or account_api_key and account_email params are required.")
-    if module.params['type'] == 'SRV':
-        if not ((module.params['weight'] is not None and module.params['port'] is not None
-                 and not (module.params['value'] is None or module.params['value'] == ''))
-                or (module.params['weight'] is None and module.params['port'] is None
-                    and (module.params['value'] is None or module.params['value'] == ''))):
-            module.fail_json(msg="For SRV records the params weight, port and value all need to be defined, or not at all.")
+    if (
+        module.params['type'] == 'SRV'
+        and (
+            module.params['weight'] is None
+            or module.params['port'] is None
+            or (module.params['value'] is None or module.params['value'] == '')
+        )
+        and (
+            module.params['weight'] is not None
+            or module.params['port'] is not None
+            or module.params['value'] is not None
+            and module.params['value'] != ''
+        )
+    ):
+        module.fail_json(msg="For SRV records the params weight, port and value all need to be defined, or not at all.")
 
-    if module.params['type'] == 'SSHFP':
-        if not ((module.params['algorithm'] is not None and module.params['hash_type'] is not None
-                 and not (module.params['value'] is None or module.params['value'] == ''))
-                or (module.params['algorithm'] is None and module.params['hash_type'] is None
-                    and (module.params['value'] is None or module.params['value'] == ''))):
-            module.fail_json(msg="For SSHFP records the params algorithm, hash_type and value all need to be defined, or not at all.")
+    if (
+        module.params['type'] == 'SSHFP'
+        and (
+            module.params['algorithm'] is None
+            or module.params['hash_type'] is None
+            or (module.params['value'] is None or module.params['value'] == '')
+        )
+        and (
+            module.params['algorithm'] is not None
+            or module.params['hash_type'] is not None
+            or module.params['value'] is not None
+            and module.params['value'] != ''
+        )
+    ):
+        module.fail_json(msg="For SSHFP records the params algorithm, hash_type and value all need to be defined, or not at all.")
 
-    if module.params['type'] == 'TLSA':
-        if not ((module.params['cert_usage'] is not None and module.params['selector'] is not None and module.params['hash_type'] is not None
-                 and not (module.params['value'] is None or module.params['value'] == ''))
-                or (module.params['cert_usage'] is None and module.params['selector'] is None and module.params['hash_type'] is None
-                    and (module.params['value'] is None or module.params['value'] == ''))):
-            module.fail_json(msg="For TLSA records the params cert_usage, selector, hash_type and value all need to be defined, or not at all.")
+    if (
+        module.params['type'] == 'TLSA'
+        and (
+            module.params['cert_usage'] is None
+            or module.params['selector'] is None
+            or module.params['hash_type'] is None
+            or (module.params['value'] is None or module.params['value'] == '')
+        )
+        and (
+            module.params['cert_usage'] is not None
+            or module.params['selector'] is not None
+            or module.params['hash_type'] is not None
+            or module.params['value'] is not None
+            and module.params['value'] != ''
+        )
+    ):
+        module.fail_json(msg="For TLSA records the params cert_usage, selector, hash_type and value all need to be defined, or not at all.")
 
-    if module.params['type'] == 'DS':
-        if not ((module.params['key_tag'] is not None and module.params['algorithm'] is not None and module.params['hash_type'] is not None
-                 and not (module.params['value'] is None or module.params['value'] == ''))
-                or (module.params['key_tag'] is None and module.params['algorithm'] is None and module.params['hash_type'] is None
-                    and (module.params['value'] is None or module.params['value'] == ''))):
-            module.fail_json(msg="For DS records the params key_tag, algorithm, hash_type and value all need to be defined, or not at all.")
+    if (
+        module.params['type'] == 'DS'
+        and (
+            module.params['key_tag'] is None
+            or module.params['algorithm'] is None
+            or module.params['hash_type'] is None
+            or (module.params['value'] is None or module.params['value'] == '')
+        )
+        and (
+            module.params['key_tag'] is not None
+            or module.params['algorithm'] is not None
+            or module.params['hash_type'] is not None
+            or module.params['value'] is not None
+            and module.params['value'] != ''
+        )
+    ):
+        module.fail_json(msg="For DS records the params key_tag, algorithm, hash_type and value all need to be defined, or not at all.")
 
     changed = False
     cf_api = CloudflareAPI(module)

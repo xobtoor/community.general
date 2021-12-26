@@ -201,7 +201,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
                 ips += [instance.ips.ipv6.slaac, instance.ips.ipv6.link_local]
                 ips += instance.ips.ipv6.pools
 
-                for ip_type in set(ip.type for ip in ips):
+                for ip_type in {ip.type for ip in ips}:
                     self.inventory.set_variable(
                         instance.label,
                         ip_type,
@@ -209,10 +209,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
                     )
 
     def _ip_data(self, ip_list):
-        data = []
-        for ip in list(ip_list):
-            data.append(
-                {
+        return [{
                     'address': ip.address,
                     'subnet_mask': ip.subnet_mask,
                     'gateway': ip.gateway,
@@ -220,9 +217,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
                     'prefix': ip.prefix,
                     'rdns': ip.rdns,
                     'type': ip.type
-                }
-            )
-        return data
+                } for ip in list(ip_list)]
 
     def _validate_option(self, name, desired_type, option_value):
         """Validate user specified configuration data against types."""

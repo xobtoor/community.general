@@ -181,7 +181,7 @@ IFPROPS_MAPPING = dict(
 
 
 def getsystem(conn, name, token):
-    system = dict()
+    system = {}
     if name:
         # system = conn.get_system(name, token)
         systems = conn.find_system(dict(name=name), token)
@@ -295,7 +295,7 @@ def main():
                         module.fail_json(msg="Unable to change '{0}' to '{1}'. {2}".format(key, value, e))
 
         # Add interface properties
-        interface_properties = dict()
+        interface_properties = {}
         if module.params['interfaces']:
             for device, values in iteritems(module.params['interfaces']):
                 for key, value in iteritems(values):

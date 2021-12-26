@@ -156,12 +156,10 @@ def ldap_search(filter, base=None, attr=None):
         result_type, result_data = uldap().lo.lo.result(msgid, all=0)
         if not result_data:
             break
-        if result_type is ldap_module().RES_SEARCH_RESULT:  # pragma: no cover
+        if result_type is ldap_module().RES_SEARCH_RESULT:
             break
-        else:
-            if result_type is ldap_module().RES_SEARCH_ENTRY:
-                for res in result_data:
-                    yield res
+        if result_type is ldap_module().RES_SEARCH_ENTRY:
+            yield from result_data
     uldap().lo.lo.abandon(msgid)
 
 

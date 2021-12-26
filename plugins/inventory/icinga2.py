@@ -163,7 +163,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
     def _query_hosts(self, hosts=None, attrs=None, joins=None, host_filter=None):
         query_hosts_url = "{0}/objects/hosts".format(self.icinga2_url)
         self.headers['X-HTTP-Method-Override'] = 'GET'
-        data_dict = dict()
+        data_dict = {}
         if hosts:
             data_dict['hosts'] = hosts
         if attrs is not None:
@@ -186,13 +186,10 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
             query_args['host_filter'] = self.host_filter
         # Icinga2 API Call
         results_json = self._query_hosts(**query_args)
-        # Manipulate returned API data to Ansible inventory spec
-        ansible_inv = self._convert_inv(results_json)
-        return ansible_inv
+        return self._convert_inv(results_json)
 
     def _populate(self):
-        groups = self._to_json(self.get_inventory_from_icinga())
-        return groups
+        return self._to_json(self.get_inventory_from_icinga())
 
     def _to_json(self, in_dict):
         """Convert dictionary to JSON"""
@@ -200,7 +197,6 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
 
     def _convert_inv(self, json_data):
         """Convert Icinga2 API data to JSON format for Ansible"""
-        groups_dict = {"_meta": {"hostvars": {}}}
         for entry in json_data:
             host_attrs = entry['attrs']
             if self.inventory_attr == "name":
@@ -213,10 +209,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
                     host_name = entry.get('name')
             if self.inventory_attr == "display_name":
                 host_name = host_attrs.get('display_name')
-            if host_attrs['state'] == 0:
-                host_attrs['state'] = 'on'
-            else:
-                host_attrs['state'] = 'off'
+            host_attrs['state'] = 'on' if host_attrs['state'] == 0 else 'off'
             host_groups = host_attrs.get('groups')
             self.inventory.add_host(host_name)
             for group in host_groups:
@@ -232,7 +225,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
                                         host_attrs['state'])
             self.inventory.set_variable(host_name, 'state_type',
                                         host_attrs['state_type'])
-        return groups_dict
+        return {"_meta": {"hostvars": {}}}
 
     def parse(self, inventory, loader, path, cache=True):
 

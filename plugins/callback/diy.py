@@ -836,14 +836,12 @@ class CallbackModule(Default):
                 self.DIY_NS + "_" + _option_name,
                 self.get_option(_option_name)
             )
-            _ret.update({option: self._template(
+            _ret[option] = self._template(
                 loader=loader,
                 template=_option_template,
                 variables=variables
-            )})
-
-        _ret.update({'vars': variables})
-
+            )
+        _ret['vars'] = variables
         return _ret
 
     def _using_diy(self, spec):

@@ -106,9 +106,10 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
 
     def verify_file(self, path):
         valid = False
-        if super(InventoryModule, self).verify_file(path):
-            if path.endswith(('opennebula.yaml', 'opennebula.yml')):
-                valid = True
+        if super(InventoryModule, self).verify_file(path) and path.endswith(
+            ('opennebula.yaml', 'opennebula.yml')
+        ):
+            valid = True
         return valid
 
     def _get_connection_info(self):
@@ -190,9 +191,8 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
                 labels = labels.split(',')
 
             # filter by label
-            if label_filter is not None:
-                if label_filter not in labels:
-                    continue
+            if label_filter is not None and label_filter not in labels:
+                continue
 
             server['name'] = vm.NAME
             server['LABELS'] = labels

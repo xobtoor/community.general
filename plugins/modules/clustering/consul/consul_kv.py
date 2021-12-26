@@ -178,7 +178,7 @@ def _has_value_changed(consul_client, key, target_value):
 def execute(module):
     state = module.params.get('state')
 
-    if state == 'acquire' or state == 'release':
+    if state in ['acquire', 'release']:
         lock(module, state)
     elif state == 'present':
         if module.params.get('value') is NOT_SET:

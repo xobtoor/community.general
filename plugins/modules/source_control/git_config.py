@@ -190,11 +190,7 @@ def main():
     # Set the locale to C to ensure consistent messages.
     module.run_command_environ_update = dict(LANG='C', LC_ALL='C', LC_MESSAGES='C', LC_CTYPE='C')
 
-    if params['name']:
-        name = params['name']
-    else:
-        name = None
-
+    name = params['name'] or None
     if params['scope']:
         scope = params['scope']
     elif params['list_all']:
@@ -208,11 +204,7 @@ def main():
     else:
         unset = None
 
-    if params['value']:
-        new_value = params['value']
-    else:
-        new_value = None
-
+    new_value = params['value'] or None
     args = [git_path, "config", "--includes"]
     if params['list_all']:
         args.append('-l')
@@ -224,10 +216,7 @@ def main():
     if name:
         args.append(name)
 
-    if scope == 'local':
-        dir = params['repo']
-    elif params['list_all'] and params['repo']:
-        # Include local settings from a specific repo when listing all available settings
+    if scope == 'local' or params['list_all'] and params['repo']:
         dir = params['repo']
     else:
         # Run from root directory to avoid accidentally picking up any local config settings

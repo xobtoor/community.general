@@ -161,17 +161,15 @@ def list_pritunl_organizations(
 
     if response.getcode() != 200:
         raise PritunlException("Could not retrieve organizations from Pritunl")
-    else:
-        for org in json.loads(response.read()):
+    for org in json.loads(response.read()):
             # No filtering
-            if filters is None:
-                orgs.append(org)
-            else:
-                if not any(
-                    filter_val != org[filter_key]
-                    for filter_key, filter_val in iteritems(filters)
-                ):
-                    orgs.append(org)
+        if filters is None:
+            orgs.append(org)
+        elif all(
+            filter_val == org[filter_key]
+            for filter_key, filter_val in iteritems(filters)
+        ):
+            orgs.append(org)
 
     return orgs
 
@@ -191,18 +189,16 @@ def list_pritunl_users(
 
     if response.getcode() != 200:
         raise PritunlException("Could not retrieve users from Pritunl")
-    else:
-        for user in json.loads(response.read()):
+    for user in json.loads(response.read()):
             # No filtering
-            if filters is None:
-                users.append(user)
+        if filters is None:
+            users.append(user)
 
-            else:
-                if not any(
-                    filter_val != user[filter_key]
-                    for filter_key, filter_val in iteritems(filters)
-                ):
-                    users.append(user)
+        elif all(
+            filter_val == user[filter_key]
+            for filter_key, filter_val in iteritems(filters)
+        ):
+            users.append(user)
 
     return users
 

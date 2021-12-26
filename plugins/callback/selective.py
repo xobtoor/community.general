@@ -69,11 +69,7 @@ COLORS = {
 def dict_diff(prv, nxt):
     """Return a dict of keys that differ with another config object."""
     keys = set(list(prv.keys()) + list(nxt.keys()))
-    result = {}
-    for k in keys:
-        if prv.get(k) != nxt.get(k):
-            result[k] = (prv.get(k), nxt.get(k))
-    return result
+    return {k: (prv.get(k), nxt.get(k)) for k in keys if prv.get(k) != nxt.get(k)}
 
 
 def colorize(msg, color):
@@ -120,9 +116,7 @@ class CallbackModule(CallbackBase):
 
     def _indent_text(self, text, indent_level):
         lines = text.splitlines()
-        result_lines = []
-        for l in lines:
-            result_lines.append("{0}{1}".format(' ' * indent_level, l))
+        result_lines = ["{0}{1}".format(' ' * indent_level, l) for l in lines]
         return '\n'.join(result_lines)
 
     def _print_diff(self, diff, indent_level):
@@ -145,9 +139,8 @@ class CallbackModule(CallbackBase):
             name = colorize(host_or_item.name, 'not_so_bold')
         else:
             indent_level = 4
-            if isinstance(host_or_item, dict):
-                if 'key' in host_or_item.keys():
-                    host_or_item = host_or_item['key']
+            if isinstance(host_or_item, dict) and 'key' in host_or_item.keys():
+                host_or_item = host_or_item['key']
             name = colorize(to_text(host_or_item), 'bold')
 
         if error:

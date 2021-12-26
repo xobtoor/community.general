@@ -157,11 +157,7 @@ def webex_msg(module):
         results['failed'] = False
         results['status_code'] = status_code
 
-        if module.check_mode:
-            results['message'] = 'Authentication Successful.'
-        else:
-            results['message'] = msg
-
+        results['message'] = 'Authentication Successful.' if module.check_mode else msg
     return results
 
 

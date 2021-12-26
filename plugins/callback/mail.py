@@ -134,9 +134,7 @@ class CallbackModule(CallbackBase):
     def body_blob(self, multiline, texttype):
         ''' Turn some text output in a well-indented block for sending in a mail body '''
         intro = 'with the following %s:\n\n' % texttype
-        blob = ''
-        for line in multiline.strip('\r\n').splitlines():
-            blob += '%s\n' % line
+        blob = ''.join('%s\n' % line for line in multiline.strip('\r\n').splitlines())
         return intro + self.indent(blob) + '\n'
 
     def mail_result(self, result, failtype):

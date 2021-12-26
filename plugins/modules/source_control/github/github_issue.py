@@ -86,7 +86,7 @@ def main():
     issue = module.params['issue']
     action = module.params['action']
 
-    result = dict()
+    result = {}
 
     headers = {
         'Content-Type': 'application/json',

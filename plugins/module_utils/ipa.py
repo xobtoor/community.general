@@ -88,27 +88,21 @@ class IPAClient(object):
             except Exception as e:
                 self._fail('login', to_native(e))
         if not self.headers:
-            self.headers = dict()
+            self.headers = {}
         self.headers.update({
             'referer': self.get_base_url(),
             'Content-Type': 'application/json',
             'Accept': 'application/json'})
 
     def _fail(self, msg, e):
-        if 'message' in e:
-            err_string = e.get('message')
-        else:
-            err_string = e
+        err_string = e.get('message') if 'message' in e else e
         self.module.fail_json(msg='%s: %s' % (msg, err_string))
 
     def get_ipa_version(self):
         response = self.ping()['summary']
         ipa_ver_regex = re.compile(r'IPA server version (\d\.\d\.\d).*')
         version_match = ipa_ver_regex.match(response)
-        ipa_version = None
-        if version_match:
-            ipa_version = version_match.groups()[0]
-        return ipa_version
+        return version_match.groups()[0] if version_match else None
 
     def ping(self):
         return self._post_json(method='ping', name=None)
@@ -140,10 +134,7 @@ class IPAClient(object):
             charset = resp.headers.get_content_charset('latin-1')
         else:
             response_charset = resp.headers.getparam('charset')
-            if response_charset:
-                charset = response_charset
-            else:
-                charset = 'latin-1'
+            charset = response_charset or 'latin-1'
         resp = json.loads(to_text(resp.read(), encoding=charset))
         err = resp.get('error')
         if err is not None:
@@ -165,10 +156,7 @@ class IPAClient(object):
         result = []
         for key in module_data.keys():
             mod_value = module_data.get(key, None)
-            if isinstance(mod_value, list):
-                default = []
-            else:
-                default = None
+            default = [] if isinstance(mod_value, list) else None
             ipa_value = ipa_data.get(key, default)
             if isinstance(ipa_value, list) and not isinstance(mod_value, list):
                 mod_value = [mod_value]
@@ -182,7 +170,7 @@ class IPAClient(object):
     def modify_if_diff(self, name, ipa_list, module_list, add_method, remove_method, item=None, append=None):
         changed = False
         diff = list(set(ipa_list) - set(module_list))
-        if append is not True and len(diff) > 0:
+        if append is not True and diff:
             changed = True
             if not self.module.check_mode:
                 if item:
@@ -191,7 +179,7 @@ class IPAClient(object):
                     remove_method(name=name, item=diff)
 
         diff = list(set(module_list) - set(ipa_list))
-        if len(diff) > 0:
+        if diff:
             changed = True
             if not self.module.check_mode:
                 if item:

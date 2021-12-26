@@ -201,10 +201,9 @@ def create_annotation(module):
 
 def build_headers(api_token):
     '''Takes api token, returns headers with it included.'''
-    headers = {'X-Circonus-App-Name': 'ansible',
+    return {'X-Circonus-App-Name': 'ansible',
                'Host': 'api.circonus.com', 'X-Circonus-Auth-Token': api_token,
                'Accept': 'application/json'}
-    return headers
 
 
 def main():

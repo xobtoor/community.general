@@ -229,7 +229,7 @@ class OneViewModuleBase(object):
 
     def _build_argument_spec(self, additional_arg_spec, validate_etag_support):
 
-        merged_arg_spec = dict()
+        merged_arg_spec = {}
         merged_arg_spec.update(self.ONEVIEW_COMMON_ARGS)
 
         if validate_etag_support:
@@ -278,9 +278,10 @@ class OneViewModuleBase(object):
 
         """
         try:
-            if self.validate_etag_support:
-                if not self.module.params.get('validate_etag'):
-                    self.oneview_client.connection.disable_etag_validation()
+            if self.validate_etag_support and not self.module.params.get(
+                'validate_etag'
+            ):
+                self.oneview_client.connection.disable_etag_validation()
 
             result = self.execute_module()
 
@@ -432,11 +433,10 @@ class OneViewModuleBase(object):
 
         # Checks all keys in the second dict, looking for missing elements
         for key in resource2.keys():
-            if key not in resource1:
-                if resource2[key] is not None:
-                    # Inexistent key is equivalent to exist with value None
-                    self.module.log(self.MSG_DIFF_AT_KEY.format(key) + debug_resources)
-                    return False
+            if key not in resource1 and resource2[key] is not None:
+                # Inexistent key is equivalent to exist with value None
+                self.module.log(self.MSG_DIFF_AT_KEY.format(key) + debug_resources)
+                return False
 
         return True
 

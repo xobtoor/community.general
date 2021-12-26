@@ -103,14 +103,7 @@ class CyberarkPassword:
         if self.query is None:
             raise AnsibleError("CyberArk Error: No Vault query specified")
 
-        if self.output is None:
-            # If no output is specified, return at least the password
-            self.output = "password"
-        else:
-            # To avoid reference issues/confusion to values, all
-            # output 'keys' will be in lowercase.
-            self.output = self.output.lower()
-
+        self.output = "password" if self.output is None else self.output.lower()
         self.b_delimiter = b"@#@"  # Known delimiter to split output results
 
     def get(self):
@@ -127,13 +120,10 @@ class CyberarkPassword:
                 '-d', self.b_delimiter]
             all_parms.extend(self.extra_parms)
 
-            b_credential = b""
             b_all_params = [to_bytes(v) for v in all_parms]
             tmp_output, tmp_error = Popen(b_all_params, stdout=PIPE, stderr=PIPE, stdin=PIPE).communicate()
 
-            if tmp_output:
-                b_credential = to_bytes(tmp_output)
-
+            b_credential = to_bytes(tmp_output) if tmp_output else b""
             if tmp_error:
                 raise AnsibleError("ERROR => %s " % (tmp_error))
 
@@ -179,5 +169,4 @@ class LookupModule(LookupBase):
             return return_values
         else:
             cyberark_conn = CyberarkPassword(**terms)
-            result = cyberark_conn.get()
-            return result
+            return cyberark_conn.get()

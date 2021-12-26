@@ -60,9 +60,8 @@ class RegistrationBase(object):
             else:
                 cfg.set('main', 'enabled', 0)
 
-            fd = open(tmpfile, 'w+')
-            cfg.write(fd)
-            fd.close()
+            with open(tmpfile, 'w+') as fd:
+                cfg.write(fd)
             self.module.atomic_move(tmpfile, plugin_conf)
 
     def subscribe(self, **kwargs):
@@ -136,10 +135,7 @@ class Rhsm(RegistrationBase):
         '''
         args = ['subscription-manager', 'identity']
         rc, stdout, stderr = self.module.run_command(args, check_rc=False)
-        if rc == 0:
-            return True
-        else:
-            return False
+        return rc == 0
 
     def register(self, username, password, autosubscribe, activationkey):
         '''
@@ -214,10 +210,7 @@ class RhsmPool(object):
     def subscribe(self):
         args = "subscription-manager subscribe --pool %s" % self.PoolId
         rc, stdout, stderr = self.module.run_command(args, check_rc=True)
-        if rc == 0:
-            return True
-        else:
-            return False
+        return rc == 0
 
 
 class RhsmPools(object):

@@ -125,17 +125,11 @@ class SplunkHTTPCollectorSource(object):
             self.ansible_version = \
                 result._task_fields['args'].get('_ansible_version')
 
-        if result._task._role:
-            ansible_role = str(result._task._role)
-        else:
-            ansible_role = None
-
+        ansible_role = str(result._task._role) if result._task._role else None
         if 'args' in result._task_fields:
             del result._task_fields['args']
 
-        data = {}
-        data['uuid'] = result._task._uuid
-        data['session'] = self.session
+        data = {'uuid': result._task._uuid, 'session': self.session}
         if batch is not None:
             data['batch'] = batch
         data['status'] = state

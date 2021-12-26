@@ -247,13 +247,13 @@ class OpenNebulaModule:
             return False
 
         self.cast_template(desired)
-        intersection = dict()
+        intersection = {}
         for dkey in desired.keys():
             if dkey in current.keys():
                 intersection[dkey] = current[dkey]
             else:
                 return True
-        return not (desired == intersection)
+        return desired != intersection
 
     def wait_for_state(self, element_name, state, state_name, target_states,
                        invalid_states=None, transition_states=None,
@@ -280,9 +280,8 @@ class OpenNebulaModule:
             if current_state in invalid_states:
                 self.fail('invalid %s state %s' % (element_name, state_name(current_state)))
 
-            if transition_states:
-                if current_state not in transition_states:
-                    self.fail('invalid %s transition state %s' % (element_name, state_name(current_state)))
+            if transition_states and current_state not in transition_states:
+                self.fail('invalid %s transition state %s' % (element_name, state_name(current_state)))
 
             if current_state in target_states:
                 return True

@@ -36,10 +36,7 @@ from ansible.plugins.callback.default import CallbackModule as Default
 # from http://stackoverflow.com/a/15423007/115478
 def should_use_block(value):
     """Returns true if string should be in block format"""
-    for c in u"\u000a\u000d\u001c\u001d\u001e\u0085\u2028\u2029":
-        if c in value:
-            return True
-    return False
+    return any(c in value for c in '\n\r\x1c\x1d\x1e\x85\u2028\u2029')
 
 
 class MyDumper(AnsibleDumper):

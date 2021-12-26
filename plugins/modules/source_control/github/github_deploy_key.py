@@ -219,25 +219,21 @@ class GithubDeployKey(object):
             if info["status"] == 200:
                 yield self.module.from_json(resp.read())
 
-                links = {}
-                for x, y in findall(r'<([^>]+)>;\s*rel="(\w+)"', info["link"]):
-                    links[y] = x
-
+                links = {y: x for x, y in findall(r'<([^>]+)>;\s*rel="(\w+)"', info["link"])}
                 url = links.get('next')
             else:
                 self.handle_error(method="GET", info=info)
 
     def get_existing_key(self):
         for keys in self.paginate(self.url):
-            if keys:
-                for i in keys:
-                    existing_key_id = str(i["id"])
-                    if i["key"].split() == self.key.split()[:2]:
-                        return existing_key_id
-                    elif i['title'] == self.name and self.force:
-                        return existing_key_id
-            else:
+            if not keys:
                 return None
+            for i in keys:
+                existing_key_id = str(i["id"])
+                if i["key"].split() == self.key.split()[:2]:
+                    return existing_key_id
+                elif i['title'] == self.name and self.force:
+                    return existing_key_id
 
     def add_new_key(self):
         request_body = {"title": self.name, "key": self.key, "read_only": self.read_only}
@@ -276,13 +272,12 @@ class GithubDeployKey(object):
             self.module.fail_json(msg="Failed to connect to {0} due to invalid credentials".format(self.github_url), http_status_code=status_code, error=err)
         elif status_code == 404:
             self.module.fail_json(msg="GitHub repository does not exist", http_status_code=status_code, error=err)
-        else:
-            if method == "GET":
-                self.module.fail_json(msg="Failed to retrieve existing deploy keys", http_status_code=status_code, error=err)
-            elif method == "POST":
-                self.module.fail_json(msg="Failed to add deploy key", http_status_code=status_code, error=err)
-            elif method == "DELETE":
-                self.module.fail_json(msg="Failed to delete existing deploy key", id=key_id, http_status_code=status_code, error=err)
+        elif method == "GET":
+            self.module.fail_json(msg="Failed to retrieve existing deploy keys", http_status_code=status_code, error=err)
+        elif method == "POST":
+            self.module.fail_json(msg="Failed to add deploy key", http_status_code=status_code, error=err)
+        elif method == "DELETE":
+            self.module.fail_json(msg="Failed to delete existing deploy key", id=key_id, http_status_code=status_code, error=err)
 
 
 def main():
@@ -322,7 +317,7 @@ def main():
         key_id = deploy_key.get_existing_key()
         if deploy_key.state == "present" and key_id is None:
             module.exit_json(changed=True)
-        elif deploy_key.state == "present" and key_id is not None:
+        elif deploy_key.state == "present":
             module.exit_json(changed=False)
 
     # to forcefully modify an existing key, the existing key must be deleted first

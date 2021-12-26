@@ -303,7 +303,7 @@ class DeployHelper(object):
 
         previous_release, previous_release_path = self._get_last_release(current_path)
 
-        if not self.release and (self.state == 'query' or self.state == 'present'):
+        if not self.release and self.state in ['query', 'present']:
             self.release = time.strftime("%Y%m%d%H%M%S")
 
         if self.release:
@@ -354,9 +354,8 @@ class DeployHelper(object):
         return changed
 
     def check_link(self, path):
-        if os.path.lexists(path):
-            if not os.path.islink(path):
-                self.module.fail_json(msg="%s exists but is not a symbolic link" % path)
+        if os.path.lexists(path) and not os.path.islink(path):
+            self.module.fail_json(msg="%s exists but is not a symbolic link" % path)
 
     def create_link(self, source, link_name):
         if os.path.islink(link_name):
@@ -392,16 +391,15 @@ class DeployHelper(object):
         return changed
 
     def remove_unfinished_builds(self, releases_path):
-        changes = 0
-
-        for release in os.listdir(releases_path):
-            if os.path.isfile(os.path.join(releases_path, release, self.unfinished_filename)):
-                if self.module.check_mode:
-                    changes += 1
-                else:
-                    changes += self.delete_path(os.path.join(releases_path, release))
-
-        return changes
+        return sum(
+            1
+            if self.module.check_mode
+            else self.delete_path(os.path.join(releases_path, release))
+            for release in os.listdir(releases_path)
+            if os.path.isfile(
+                os.path.join(releases_path, release, self.unfinished_filename)
+            )
+        )
 
     def remove_unfinished_link(self, path):
         changed = False
@@ -514,11 +512,7 @@ def main():
         result['ansible_facts'] = {'deploy_helper': []}
         changes += deploy_helper.delete_path(facts['project_path'])
 
-    if changes > 0:
-        result['changed'] = True
-    else:
-        result['changed'] = False
-
+    result['changed'] = changes > 0
     module.exit_json(**result)
 
 

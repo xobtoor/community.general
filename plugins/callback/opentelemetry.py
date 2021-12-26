@@ -112,10 +112,7 @@ class TaskData:
         self.path = path
         self.play = play
         self.host_data = OrderedDict()
-        if sys.version_info >= (3, 7):
-            self.start = time.time_ns()
-        else:
-            self.start = _time_ns()
+        self.start = time.time_ns() if sys.version_info >= (3, 7) else _time_ns()
         self.action = action
         self.args = args
 
@@ -140,10 +137,7 @@ class HostData:
         self.name = name
         self.status = status
         self.result = result
-        if sys.version_info >= (3, 7):
-            self.finish = time.time_ns()
-        else:
-            self.finish = _time_ns()
+        self.finish = time.time_ns() if sys.version_info >= (3, 7) else _time_ns()
 
 
 class OpenTelemetrySource(object):
@@ -161,8 +155,7 @@ class OpenTelemetrySource(object):
         self._display = display
 
     def traceparent_context(self, traceparent):
-        carrier = dict()
-        carrier['traceparent'] = traceparent
+        carrier = {'traceparent': traceparent}
         return TraceContextTextMapPropagator().extract(carrier=carrier)
 
     def start_task(self, tasks_data, hide_task_arguments, play_name, task):
@@ -292,9 +285,8 @@ class OpenTelemetrySource(object):
 
         if span is None and self._display is not None:
             self._display.warning('span object is None. Please double check if that is expected.')
-        else:
-            if attributeValue is not None:
-                span.set_attribute(attributeName, attributeValue)
+        elif attributeValue is not None:
+            span.set_attribute(attributeName, attributeValue)
 
     def add_attributes_for_service_map_if_possible(self, span, task_data):
         """Update the span attributes with the service that the task interacted with, if possible."""

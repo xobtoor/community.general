@@ -196,14 +196,13 @@ class ClcPublicIp(object):
         Define the argument spec for the ansible module
         :return: argument spec dictionary
         """
-        argument_spec = dict(
+        return dict(
             server_ids=dict(type='list', required=True, elements='str'),
             protocol=dict(default='TCP', choices=['TCP', 'UDP', 'ICMP']),
             ports=dict(type='list', elements='int'),
             wait=dict(type='bool', default=True),
             state=dict(default='present', choices=['present', 'absent']),
         )
-        return argument_spec
 
     def ensure_public_ip_present(self, server_ids, protocol, ports):
         """

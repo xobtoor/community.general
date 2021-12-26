@@ -76,10 +76,8 @@ class Connection(ConnectionBase):
         display.vvvv("CMD: ", cmd)
         if not cmd.endswith("\n"):
             cmd = cmd + "\n"
-        local_cmd = []
+        local_cmd = ['qvm-run', '--pass-io', '--service']
 
-        # For dom0
-        local_cmd.extend(["qvm-run", "--pass-io", "--service"])
         if self.user != "user":
             # Means we have a remote_user value
             local_cmd.extend(["-u", self.user])

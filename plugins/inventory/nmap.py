@@ -141,7 +141,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
                 cmd.append('-4')
             elif self._options['ipv6'] and not self._options['ipv4']:
                 cmd.append('-6')
-            elif not self._options['ipv6'] and not self._options['ipv4']:
+            elif not self._options['ipv6']:
                 raise AnsibleParserError('One of ipv4 or ipv6 must be enabled for this plugin')
 
             if self._options['exclude']:
@@ -180,11 +180,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
                             host = hits.group(1)
 
                         # if no reverse dns exists, just use ip instead as hostname
-                        if hits.group(2) is not None:
-                            ip = hits.group(2)
-                        else:
-                            ip = hits.group(1)
-
+                        ip = hits.group(2) if hits.group(2) is not None else hits.group(1)
                         if host is not None:
                             # update inventory
                             results.append(dict())

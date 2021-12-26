@@ -318,9 +318,7 @@ class CallbackModule(CallbackBase):
         self.emit_formatted(results)
 
     def v2_playbook_on_play_start(self, play):
-        results = {}
-        results['le_jobid'] = self.le_jobid
-        results['started_by'] = os.getlogin()
+        results = {'le_jobid': self.le_jobid, 'started_by': os.getlogin()}
         if play.name:
             results['play'] = play.name
         results['hosts'] = play.hosts

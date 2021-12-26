@@ -170,34 +170,21 @@ class BE(object):
                     if(full_name == []):
                         continue
                     check[0] = full_name[len(full_name) - 1]
-                    if check[0] == self.name:
-                        return check
                 else:
                     check = line.split(';')
-                    if check[0] == self.name:
-                        return check
+                if check[0] == self.name:
+                    return check
         else:
             for line in out.splitlines():
-                if self.is_freebsd:
-                    check = line.split()
-                    if check[0] == self.name:
-                        return check
-                else:
-                    check = line.split(';')
-                    if check[0] == self.name:
-                        return check
+                check = line.split() if self.is_freebsd else line.split(';')
+                if check[0] == self.name:
+                    return check
         return None
 
     def exists(self):
         (rc, out, dummy) = self._beadm_list()
 
-        if rc == 0:
-            if self._find_be_by_name(out):
-                return True
-            else:
-                return False
-        else:
-            return False
+        return bool(rc == 0 and self._find_be_by_name(out))
 
     def is_activated(self):
         (rc, out, dummy) = self._beadm_list()
@@ -206,13 +193,13 @@ class BE(object):
             line = self._find_be_by_name(out)
             if line is None:
                 return False
-            if self.is_freebsd:
-                if 'R' in line[1]:
-                    return True
-            else:
-                if 'R' in line[2]:
-                    return True
-
+            if (
+                self.is_freebsd
+                and 'R' in line[1]
+                or not self.is_freebsd
+                and 'R' in line[2]
+            ):
+                return True
         return False
 
     def activate_be(self):
@@ -245,16 +232,13 @@ class BE(object):
             line = self._find_be_by_name(out)
             if line is None:
                 return False
-            if self.is_freebsd:
-                # On FreeBSD, we exclude currently mounted BE on /, as it is
-                # special and can be activated even if it is mounted. That is not
-                # possible with non-root BEs.
-                if line[2] != '-' and line[2] != '/':
-                    return True
-            else:
-                if line[3]:
-                    return True
-
+            if (
+                self.is_freebsd
+                and line[2] not in ['-', '/']
+                or not self.is_freebsd
+                and line[3]
+            ):
+                return True
         return False
 
     def mount_be(self):
@@ -293,10 +277,7 @@ def main():
     rc = None
     out = ''
     err = ''
-    result = {}
-    result['name'] = be.name
-    result['state'] = be.state
-
+    result = {'name': be.name, 'state': be.state}
     if be.snapshot:
         result['snapshot'] = be.snapshot
 
@@ -320,9 +301,8 @@ def main():
                 if module.check_mode:
                     module.exit_json(changed=True)
 
-                if be.is_freebsd:
-                    if be.is_activated():
-                        module.fail_json(msg='Unable to remove active BE!')
+                if be.is_freebsd and be.is_activated():
+                    module.fail_json(msg='Unable to remove active BE!')
 
                 (rc, out, err) = be.destroy_be()
 
@@ -354,9 +334,8 @@ def main():
 
             # On FreeBSD, beadm is unable to activate mounted BEs, so we add
             # an explicit check for that case.
-            if be.is_freebsd:
-                if be.is_mounted():
-                    module.fail_json(msg='Unable to activate mounted BE!')
+            if be.is_freebsd and be.is_mounted():
+                module.fail_json(msg='Unable to activate mounted BE!')
 
             (rc, out, err) = be.activate_be()
 
@@ -391,11 +370,7 @@ def main():
                                  stderr=err,
                                  rc=rc)
 
-    if rc is None:
-        result['changed'] = False
-    else:
-        result['changed'] = True
-
+    result['changed'] = rc is not None
     if out:
         result['stdout'] = out
     if err:

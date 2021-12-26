@@ -400,11 +400,10 @@ class DME2(object):
     def _headers(self):
         currTime = self._get_date()
         hashstring = self._create_hash(currTime)
-        headers = {'x-dnsme-apiKey': self.api,
+        return {'x-dnsme-apiKey': self.api,
                    'x-dnsme-hmac': hashstring,
                    'x-dnsme-requestDate': currTime,
                    'content-type': 'application/json'}
-        return headers
 
     def _get_date(self):
         locale.setlocale(locale.LC_TIME, 'C')
@@ -606,7 +605,7 @@ def main():
     current_record = DME.getMatchingRecord(record_name, record_type, record_value)
     new_record = {'name': record_name}
     for i in ["record_value", "record_type", "record_ttl"]:
-        if not module.params[i] is None:
+        if module.params[i] is not None:
             new_record[i[len("record_"):]] = module.params[i]
     # Special handling for mx record
     if new_record["type"] == "MX":
@@ -621,8 +620,8 @@ def main():
         new_record["value"] = new_record["value"].split(" ")[3]
 
     # Fetch existing monitor if the A record indicates it should exist and build the new monitor
-    current_monitor = dict()
-    new_monitor = dict()
+    current_monitor = {}
+    new_monitor = {}
     if current_record and current_record['type'] == 'A':
         current_monitor = DME.getMonitor(current_record['id'])
 

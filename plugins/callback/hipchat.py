@@ -128,13 +128,14 @@ class CallbackModule(CallbackBase):
 
         headers = {'Authorization': 'Bearer %s' % self.token, 'Content-Type': 'application/json'}
 
-        body = {}
-        body['room_id'] = self.room
-        body['from'] = self.from_name[:15]  # max length is 15
-        body['message'] = msg
-        body['message_format'] = msg_format
-        body['color'] = color
-        body['notify'] = self.allow_notify and notify
+        body = {
+            'room_id': self.room,
+            'from': self.from_name[:15],
+            'message': msg,
+            'message_format': msg_format,
+            'color': color,
+            'notify': self.allow_notify and notify,
+        }
 
         data = json.dumps(body)
         url = self.API_V2_URL + "room/{room_id}/notification".format(room_id=self.room)
@@ -147,13 +148,14 @@ class CallbackModule(CallbackBase):
     def send_msg_v1(self, msg, msg_format='text', color='yellow', notify=False):
         """Method for sending a message to HipChat"""
 
-        params = {}
-        params['room_id'] = self.room
-        params['from'] = self.from_name[:15]  # max length is 15
-        params['message'] = msg
-        params['message_format'] = msg_format
-        params['color'] = color
-        params['notify'] = int(self.allow_notify and notify)
+        params = {
+            'room_id': self.room,
+            'from': self.from_name[:15],
+            'message': msg,
+            'message_format': msg_format,
+            'color': color,
+            'notify': int((self.allow_notify and notify)),
+        }
 
         url = ('%s?auth_token=%s' % (self.API_V1_URL, self.token))
         try:

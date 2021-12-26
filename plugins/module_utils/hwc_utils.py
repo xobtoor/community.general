@@ -188,7 +188,7 @@ class Config(object):
             raise_exc=False)
 
     def _get_service_endpoint(self, client, service_type, region):
-        k = "%s.%s" % (service_type, region if region else "")
+        k = "%s.%s" % (service_type, region or "")
 
         if k in self._endpoints:
             return self._endpoints.get(k)
@@ -281,11 +281,7 @@ class _DictComparison(object):
         if set(dict1.keys()) != set(dict2.keys()):
             return False
 
-        for k in dict1:
-            if not self._compare_value(dict1.get(k), dict2.get(k)):
-                return False
-
-        return True
+        return all(self._compare_value(dict1.get(k), dict2.get(k)) for k in dict1)
 
     def _compare_lists(self, list1, list2):
         """Takes in two lists and compares them."""
@@ -295,11 +291,7 @@ class _DictComparison(object):
         if len(list1) != len(list2):
             return False
 
-        for i in range(len(list1)):
-            if not self._compare_value(list1[i], list2[i]):
-                return False
-
-        return True
+        return all(self._compare_value(list1[i], list2[i]) for i in range(len(list1)))
 
     def _compare_value(self, value1, value2):
         """
@@ -419,11 +411,7 @@ def build_path(module, path, kv=None):
             v[n] = str(kv[n])
 
         else:
-            if n in module.params:
-                v[n] = str(module.params.get(n))
-            else:
-                v[n] = ""
-
+            v[n] = str(module.params.get(n)) if n in module.params else ""
     return path.format(**v)
 
 

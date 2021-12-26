@@ -172,11 +172,10 @@ class CPANMinus(CmdMixin, ModuleHelper):
         if v.mode == "compatibility":
             if v.name_check:
                 raise ModuleHelperException("Parameter name_check can only be used with mode=new")
-        else:
-            if v.name and v.from_path:
-                raise ModuleHelperException("Parameters 'name' and 'from_path' are mutually exclusive when 'mode=new'")
+        elif v.name and v.from_path:
+            raise ModuleHelperException("Parameters 'name' and 'from_path' are mutually exclusive when 'mode=new'")
 
-        self.command = self.module.get_bin_path(v.executable if v.executable else self.command)
+        self.command = self.module.get_bin_path(v.executable or self.command)
         self.vars.set("binary", self.command)
 
     def _is_package_installed(self, name, locallib, version):
@@ -214,17 +213,15 @@ class CPANMinus(CmdMixin, ModuleHelper):
             if self._is_package_installed(v.name, v.locallib, v.version):
                 return
             pkg_spec = v[pkg_param]
-            self.changed = self.run_command(
-                params=['notest', 'locallib', 'mirror', 'mirror_only', 'installdeps', {'name': pkg_spec}],
-            )
         else:
             installed = self._is_package_installed(v.name_check, v.locallib, v.version) if v.name_check else False
             if installed:
                 return
             pkg_spec = self.sanitize_pkg_spec_version(v[pkg_param], v.version)
-            self.changed = self.run_command(
-                params=['notest', 'locallib', 'mirror', 'mirror_only', 'installdeps', {'name': pkg_spec}],
-            )
+
+        self.changed = self.run_command(
+            params=['notest', 'locallib', 'mirror', 'mirror_only', 'installdeps', {'name': pkg_spec}],
+        )
 
     def process_command_output(self, rc, out, err):
         if self.vars.mode == "compatibility" and rc != 0:

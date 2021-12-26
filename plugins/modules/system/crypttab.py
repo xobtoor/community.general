@@ -193,9 +193,7 @@ class Crypttab(object):
         return None
 
     def __str__(self):
-        lines = []
-        for line in self._lines:
-            lines.append(str(line))
+        lines = [str(line) for line in self._lines]
         crypttab = '\n'.join(lines)
         if len(crypttab) == 0:
             crypttab += '\n'
@@ -239,9 +237,11 @@ class Line(object):
         return changed, 'updated line'
 
     def _line_valid(self, line):
-        if not line.strip() or line.startswith('#') or len(line.split()) not in (2, 3, 4):
-            return False
-        return True
+        return bool(
+            line.strip()
+            and not line.startswith('#')
+            and len(line.split()) in (2, 3, 4)
+        )
 
     def _split_line(self, line):
         fields = line.split()
@@ -264,22 +264,19 @@ class Line(object):
         return True, 'removed line'
 
     def valid(self):
-        if self.name is not None and self.backing_device is not None:
-            return True
-        return False
+        return self.name is not None and self.backing_device is not None
 
     def __str__(self):
-        if self.valid():
-            fields = [self.name, self.backing_device]
-            if self.password is not None or self.opts:
-                if self.password is not None:
-                    fields.append(self.password)
-                else:
-                    fields.append('none')
-            if self.opts:
-                fields.append(str(self.opts))
-            return ' '.join(fields)
-        return self.line
+        if not self.valid():
+            return self.line
+        fields = [self.name, self.backing_device]
+        if self.password is not None:
+            fields.append(self.password)
+        elif self.opts:
+            fields.append('none')
+        if self.opts:
+            fields.append(str(self.opts))
+        return ' '.join(fields)
 
 
 class Options(dict):
@@ -291,19 +288,13 @@ class Options(dict):
         if opts_string is not None:
             for opt in opts_string.split(','):
                 kv = opt.split('=')
-                if len(kv) > 1:
-                    k, v = (kv[0], kv[1])
-                else:
-                    k, v = (kv[0], None)
+                k, v = (kv[0], kv[1]) if len(kv) > 1 else (kv[0], None)
                 self[k] = v
 
     def add(self, opts_string):
         changed = False
         for k, v in Options(opts_string).items():
-            if k in self:
-                if self[k] != v:
-                    changed = True
-            else:
+            if k in self and self[k] != v or k not in self:
                 changed = True
             self[k] = v
         return changed, 'updated options'

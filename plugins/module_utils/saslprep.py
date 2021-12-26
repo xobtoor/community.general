@@ -34,7 +34,7 @@ from ansible.module_utils.six import text_type
 
 
 def is_unicode_str(string):
-    return True if isinstance(string, text_type) else False
+    return isinstance(string, text_type)
 
 
 def mapping_profile(string):

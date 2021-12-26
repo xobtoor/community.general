@@ -13,8 +13,6 @@ class iLORedfishUtils(RedfishUtils):
 
     def get_ilo_sessions(self):
         result = {}
-        # listing all users has always been slower than other operations, why?
-        session_list = []
         sessions_results = []
         # Get these entries, but does not fail if not found
         properties = ['Description', 'Id', 'Name', 'UserName']
@@ -27,24 +25,24 @@ class iLORedfishUtils(RedfishUtils):
         result['ret'] = True
         data = response['data']
 
-        if 'Oem' in data:
-            if data["Oem"]["Hpe"]["Links"]["MySession"]["@odata.id"]:
-                current_session = data["Oem"]["Hpe"]["Links"]["MySession"]["@odata.id"]
+        if 'Oem' in data and data["Oem"]["Hpe"]["Links"]["MySession"]["@odata.id"]:
+            current_session = data["Oem"]["Hpe"]["Links"]["MySession"]["@odata.id"]
 
-        for sessions in data[u'Members']:
-            # session_list[] are URIs
-            session_list.append(sessions[u'@odata.id'])
+        # listing all users has always been slower than other operations, why?
+        session_list = [sessions[u'@odata.id'] for sessions in data[u'Members']]
         # for each session, get details
         for uri in session_list:
-            session = {}
             if uri != current_session:
                 response = self.get_request(self.root_uri + uri)
                 if not response['ret']:
                     return response
                 data = response['data']
-                for property in properties:
-                    if property in data:
-                        session[property] = data[property]
+                session = {
+                    property: data[property]
+                    for property in properties
+                    if property in data
+                }
+
                 sessions_results.append(session)
         result["msg"] = sessions_results
         result["ret"] = True

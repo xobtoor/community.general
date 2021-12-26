@@ -147,10 +147,9 @@ class Etcd:
                 # When ETCD are working with just v1
                 if 'value' in item:
                     value = item['value']
-            else:
-                if 'node' in item:
-                    # When a usual result from ETCD
-                    value = self._parse_node(item['node'])
+            elif 'node' in item:
+                # When a usual result from ETCD
+                value = self._parse_node(item['node'])
 
             if 'errorCode' in item:
                 # Here return an error when an unknown entry responds

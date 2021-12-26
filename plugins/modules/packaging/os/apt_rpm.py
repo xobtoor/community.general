@@ -87,10 +87,7 @@ def query_package(module, name):
     # rpm -q returns 0 if the package is installed,
     # 1 if it is not installed
     rc, out, err = module.run_command("%s -q %s" % (RPM_PATH, name))
-    if rc == 0:
-        return True
-    else:
-        return False
+    return rc == 0
 
 
 def query_package_provides(module, name):
@@ -136,7 +133,7 @@ def install_packages(module, pkgspec):
         if not query_package_provides(module, package):
             packages += "'%s' " % package
 
-    if len(packages) != 0:
+    if packages != '':
 
         rc, out, err = module.run_command("%s -y install %s" % (APT_PATH, packages))
 

@@ -167,11 +167,7 @@ def _check_device_attr(module, device, attr):
 
     if rc == 255:
 
-        if attr in hidden_attrs:
-            current_param = ''
-        else:
-            current_param = None
-
+        current_param = '' if attr in hidden_attrs else None
         return current_param
 
     elif rc != 0:
@@ -185,12 +181,7 @@ def discover_device(module, device):
     """ Discover AIX devices."""
     cfgmgr_cmd = module.get_bin_path('cfgmgr', True)
 
-    if device is not None:
-        device = "-l %s" % device
-
-    else:
-        device = ''
-
+    device = "-l %s" % device if device is not None else ''
     changed = True
     msg = ''
     if not module.check_mode:
@@ -231,19 +222,19 @@ def change_device_attr(module, attributes, device, force):
         else:
             attr_not_changed.append(attributes[attr])
 
-    if len(attr_changed) > 0:
+    if attr_changed:
         changed = True
         attr_changed_msg = "Attributes changed: %s. " % ','.join(attr_changed)
     else:
         changed = False
         attr_changed_msg = ''
 
-    if len(attr_not_changed) > 0:
+    if attr_not_changed:
         attr_not_changed_msg = "Attributes already set: %s. " % ','.join(attr_not_changed)
     else:
         attr_not_changed_msg = ''
 
-    if len(attr_invalid) > 0:
+    if attr_invalid:
         attr_invalid_msg = "Invalid attributes: %s " % ', '.join(attr_invalid)
     else:
         attr_invalid_msg = ''
@@ -317,7 +308,7 @@ def main():
         msg='',
     )
 
-    if state == 'available' or state == 'present':
+    if state in ['available', 'present']:
         if attributes:
             # change attributes on device
             device_status, device_state = _check_device(module, device)
@@ -326,21 +317,19 @@ def main():
             else:
                 result['msg'] = "Device %s does not exist." % device
 
-        else:
-            # discovery devices (cfgmgr)
-            if device and device != 'all':
-                device_status, device_state = _check_device(module, device)
-                if device_status:
-                    # run cfgmgr on specific device
-                    result['changed'], result['msg'] = discover_device(module, device)
-
-                else:
-                    result['msg'] = "Device %s does not exist." % device
-
-            else:
+        elif device and device != 'all':
+            device_status, device_state = _check_device(module, device)
+            if device_status:
+                # run cfgmgr on specific device
                 result['changed'], result['msg'] = discover_device(module, device)
 
-    elif state == 'removed' or state == 'absent' or state == 'defined':
+            else:
+                result['msg'] = "Device %s does not exist." % device
+
+        else:
+            result['changed'], result['msg'] = discover_device(module, device)
+
+    elif state in ['removed', 'absent', 'defined']:
         if not device:
             result['msg'] = "device is required to removed or defined state."
 

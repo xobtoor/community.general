@@ -702,8 +702,7 @@ class ClcServer:
             if not location:
                 account = clc.v2.Account()
                 location = account.data.get('primaryDataCenter')
-            data_center = clc.v2.Datacenter(location)
-            return data_center
+            return clc.v2.Datacenter(location)
         except CLCException:
             module.fail_json(msg="Unable to find location: {0}".format(location))
 
@@ -979,13 +978,13 @@ class ClcServer:
             'os_type': p.get('os_type')
         }
 
-        count = override_count if override_count else p.get('count')
+        count = override_count or p.get('count')
 
-        changed = False if count == 0 else True
+        changed = count != 0
 
         if not changed:
             return server_dict_array, created_server_ids, partial_created_servers_ids, changed
-        for i in range(0, count):
+        for _ in range(count):
             if not module.check_mode:
                 req = self._create_clc_server(clc=clc,
                                               module=module,
@@ -1064,7 +1063,7 @@ class ClcServer:
         elif len(running_servers) > exact_count:
             to_remove = len(running_servers) - exact_count
             all_server_ids = sorted([x.id for x in running_servers])
-            remove_ids = all_server_ids[0:to_remove]
+            remove_ids = all_server_ids[:to_remove]
 
             (changed, server_dict_array, changed_server_ids) \
                 = ClcServer._delete_servers(module, clc, remove_ids)
@@ -1083,7 +1082,9 @@ class ClcServer:
         if wait:
             # Requests.WaitUntilComplete() returns the count of failed requests
             failed_requests_count = sum(
-                [request.WaitUntilComplete() for request in request_list])
+                request.WaitUntilComplete() for request in request_list
+            )
+
 
             if failed_requests_count > 0:
                 module.fail_json(
@@ -1125,13 +1126,14 @@ class ClcServer:
         if not should_add_public_ip:
             return failed_servers
 
-        ports_lst = []
         request_list = []
         server = None
 
-        for port in public_ip_ports:
-            ports_lst.append(
-                {'protocol': public_ip_protocol, 'port': port})
+        ports_lst = [
+            {'protocol': public_ip_protocol, 'port': port}
+            for port in public_ip_ports
+        ]
+
         try:
             if not module.check_mode:
                 for server in servers:
@@ -1224,23 +1226,17 @@ class ClcServer:
         :param server_ids: list of servers to delete
         :return: a list of dictionaries with server information about the servers that were deleted
         """
-        terminated_server_ids = []
         server_dict_array = []
-        request_list = []
-
         if not isinstance(server_ids, list) or len(server_ids) < 1:
             return module.fail_json(
                 msg='server_ids should be a list of servers, aborting')
 
         servers = clc.v2.Servers(server_ids).Servers()
-        for server in servers:
-            if not module.check_mode:
-                request_list.append(server.Delete())
+        request_list = [server.Delete() for server in servers if not module.check_mode]
+
         ClcServer._wait_for_requests(module, request_list)
 
-        for server in servers:
-            terminated_server_ids.append(server.id)
-
+        terminated_server_ids = [server.id for server in servers]
         return True, server_dict_array, terminated_server_ids
 
     @staticmethod
@@ -1334,11 +1330,12 @@ class ClcServer:
             lookup_group=count_group)
 
         servers = group.Servers().Servers()
-        running_servers = []
+        running_servers = [
+            server
+            for server in servers
+            if server.status == 'active' and server.powerState == 'started'
+        ]
 
-        for server in servers:
-            if server.status == 'active' and server.powerState == 'started':
-                running_servers.append(server)
 
         return servers, running_servers
 
@@ -1520,11 +1517,10 @@ class ClcServer:
                     method='GET', url='servers/%s/%s?uuid=true' %
                     (alias, svr_uuid))
                 server_id = server_obj['id']
-                server = clc.v2.Server(
+                return clc.v2.Server(
                     id=server_id,
                     alias=alias,
                     server_obj=server_obj)
-                return server
 
             except APIFailedResponse as e:
                 if e.response_status_code != 404:

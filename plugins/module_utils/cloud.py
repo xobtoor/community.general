@@ -57,7 +57,7 @@ def _exponential_backoff(retries=10, delay=2, backoff=2, max_delay=60):
         [2, 4, 8, 16, 32, 60, 60, 60, 60, 60]
     """
     def backoff_gen():
-        for retry in range(0, retries):
+        for retry in range(retries):
             sleep = delay * backoff ** retry
             yield sleep if max_delay is None else min(sleep, max_delay)
     return backoff_gen
@@ -86,7 +86,7 @@ def _full_jitter_backoff(retries=10, delay=3, max_delay=60, _random=random):
         [2, 1, 6, 6, 31]
     """
     def backoff_gen():
-        for retry in range(0, retries):
+        for retry in range(retries):
             yield _random.randint(0, min(max_delay, delay * 2 ** retry))
     return backoff_gen
 
@@ -131,18 +131,16 @@ class CloudRetry(object):
                     try:
                         return f(*args, **kwargs)
                     except Exception as e:
-                        if isinstance(e, cls.base_class):  # pylint: disable=isinstance-second-argument-not-valid-type
-                            response_code = cls.status_code_from_exception(e)
-                            if cls.found(response_code, catch_extra_error_codes):
-                                msg = "{0}: Retrying in {1} seconds...".format(str(e), delay)
-                                syslog.syslog(syslog.LOG_INFO, msg)
-                                time.sleep(delay)
-                            else:
-                                # Return original exception if exception is not a ClientError
-                                raise e
-                        else:
+                        if not isinstance(e, cls.base_class):
                             # Return original exception if exception is not a ClientError
                             raise e
+                        response_code = cls.status_code_from_exception(e)
+                        if not cls.found(response_code, catch_extra_error_codes):
+                            # Return original exception if exception is not a ClientError
+                            raise e
+                        msg = "{0}: Retrying in {1} seconds...".format(str(e), delay)
+                        syslog.syslog(syslog.LOG_INFO, msg)
+                        time.sleep(delay)
                 return f(*args, **kwargs)
 
             return retry_func  # true decorator

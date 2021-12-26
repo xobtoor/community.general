@@ -120,7 +120,6 @@ def main():
     notify = module.params["notify"]
 
     URI = "https://%s.campfirenow.com" % subscription
-    NSTR = "<message><type>SoundMessage</type><body>%s</body></message>"
     MSTR = "<message><body>%s</body></message>"
     AGENT = "Ansible/1.2"
 
@@ -134,6 +133,7 @@ def main():
 
     # Send some audible notification if requested
     if notify:
+        NSTR = "<message><type>SoundMessage</type><body>%s</body></message>"
         response, info = fetch_url(module, target_url, data=NSTR % html_escape(notify), headers=headers)
         if info['status'] not in [200, 201]:
             module.fail_json(msg="unable to send msg: '%s', campfire api"

@@ -54,10 +54,7 @@ def random_mac(value, seed=None):
     if err:
         raise AnsibleFilterError('Invalid value (%s) for random_mac: %s' % (value, err))
 
-    if seed is None:
-        r = SystemRandom()
-    else:
-        r = Random(seed)
+    r = SystemRandom() if seed is None else Random(seed)
     # Generate random int between x1000000000 and xFFFFFFFFFF
     v = r.randint(68719476736, 1099511627775)
     # Select first n chars to complement input prefix

@@ -265,7 +265,7 @@ class Migrations:
             node = self._nodes[0]
         data = self._client.info_node(cmd, node)
         data = data.split("\t")
-        if len(data) != 1 and len(data) != 2:
+        if len(data) not in [1, 2]:
             self.module.fail_json(
                 msg="Unexpected number of values returned in info command: " +
                 str(len(data))
@@ -278,16 +278,12 @@ class Migrations:
         # some commands don't return in kv format
         # so we dont want a dict from those.
         if '=' in data:
-            retval = dict(
+            return dict(
                 metric.split("=", 1) for metric in data_arr
             )
         else:
             # if only 1 element found, and not kv, return just the value.
-            if len(data_arr) == 1:
-                retval = data_arr[0]
-            else:
-                retval = data_arr
-        return retval
+            return data_arr[0] if len(data_arr) == 1 else data_arr
 
     def _update_build_list(self):
         """creates self._build_list which is a unique list
@@ -302,9 +298,7 @@ class Migrations:
         # if version <4.3 we can't use cluster-stable info cmd
         # regex hack to check for versions beginning with 0-3 or
         # beginning with 4.0,4.1,4.2
-        if re.search(R'^([0-3]\.|4\.[0-2])', min(self._build_list)):
-            return False
-        return True
+        return not re.search(R'^([0-3]\.|4\.[0-2])', min(self._build_list))
 
     def _update_cluster_namespace_list(self):
         """ make a unique list of namespaces
@@ -358,11 +352,13 @@ class Migrations:
     def _node_has_migs(self, node=None):
         """just calls namespace_has_migs and
         if any namespace has migs returns true"""
-        migs = 0
         self._update_cluster_namespace_list()
-        for namespace in self._namespaces:
-            if self._namespace_has_migs(namespace, node):
-                migs += 1
+        migs = sum(
+            1
+            for namespace in self._namespaces
+            if self._namespace_has_migs(namespace, node)
+        )
+
         return migs != 0
 
     def _cluster_key_consistent(self):
@@ -377,10 +373,8 @@ class Migrations:
                 cluster_keys[cluster_key] = 1
             else:
                 cluster_keys[cluster_key] += 1
-        if len(cluster_keys.keys()) == 1 and \
-                self._start_cluster_key in cluster_keys:
-            return True
-        return False
+        return len(cluster_keys.keys()) == 1 and \
+                self._start_cluster_key in cluster_keys
 
     def _cluster_migrates_allowed(self):
         """ensure all nodes have 'migrate_allowed' in their stats output"""
@@ -393,13 +387,8 @@ class Migrations:
 
     def _cluster_has_migs(self):
         """calls node_has_migs for each node"""
-        migs = 0
-        for node in self._nodes:
-            if self._node_has_migs(node):
-                migs += 1
-        if migs == 0:
-            return False
-        return True
+        migs = sum(1 for node in self._nodes if self._node_has_migs(node))
+        return migs != 0
 
     def _has_migs(self, local):
         if local:
@@ -412,9 +401,10 @@ class Migrations:
     def _is_min_cluster_size(self):
         """checks that all nodes in the cluster are returning the
         minimum cluster size specified in their statistics output"""
-        sizes = set()
-        for node in self._cluster_statistics:
-            sizes.add(int(self._cluster_statistics[node]['cluster_size']))
+        sizes = {
+            int(self._cluster_statistics[node]['cluster_size'])
+            for node in self._cluster_statistics
+        }
 
         if (len(sizes)) > 1:  # if we are getting more than 1 size, lets say no
             return False
@@ -432,8 +422,7 @@ class Migrations:
          If 'ignore-migrations' is either unspecified or 'false' then
          the target node's migrations counts must be zero for the provided
          'namespace' or all namespaces if 'namespace' is not provided."""
-        cluster_key = set()
-        cluster_key.add(self._info_cmd_helper('statistics')['cluster_key'])
+        cluster_key = {self._info_cmd_helper('statistics')['cluster_key']}
         cmd = "cluster-stable:"
         target_cluster_size = self.module.params['target_cluster_size']
         if target_cluster_size is not None:
@@ -445,9 +434,7 @@ class Migrations:
                 if 'unstable-cluster' in e.msg:
                     return False
                 raise e
-        if len(cluster_key) == 1:
-            return True
-        return False
+        return len(cluster_key) == 1
 
     def _cluster_good_state(self):
         """checks a few things to make sure we're OK to say the cluster
@@ -465,9 +452,8 @@ class Migrations:
         """returns a boolean, False if no migrations otherwise True"""
         consecutive_good = 0
         try_num = 0
-        skip_reason = list()
-        while \
-            try_num < int(self.module.params['tries_limit']) and \
+        skip_reason = []
+        while try_num < int(self.module.params['tries_limit']) and \
                 consecutive_good < \
                 int(self.module.params['consecutive_good_checks']):
 
@@ -482,31 +468,30 @@ class Migrations:
                     "Skipping on try#" + str(try_num) +
                     " for reason:" + reason
                 )
-            else:
-                if self._can_use_cluster_stable():
-                    if self._cluster_stable():
-                        consecutive_good += 1
-                    else:
-                        consecutive_good = 0
-                        skip_reason.append(
-                            "Skipping on try#" + str(try_num) +
-                            " for reason:" + " cluster_stable"
-                        )
-                elif self._has_migs(local):
-                    # print("_has_migs")
+            elif self._can_use_cluster_stable():
+                if self._cluster_stable():
+                    consecutive_good += 1
+                else:
+                    consecutive_good = 0
                     skip_reason.append(
                         "Skipping on try#" + str(try_num) +
-                        " for reason:" + " migrations"
+                        " for reason:" + " cluster_stable"
                     )
-                    consecutive_good = 0
-                else:
-                    consecutive_good += 1
-                    if consecutive_good == self.module.params[
-                            'consecutive_good_checks']:
-                        break
+            elif self._has_migs(local):
+                # print("_has_migs")
+                skip_reason.append(
+                    "Skipping on try#" + str(try_num) +
+                    " for reason:" + " migrations"
+                )
+                consecutive_good = 0
+            else:
+                consecutive_good += 1
+                if consecutive_good == self.module.params[
+                        'consecutive_good_checks']:
+                    break
             try_num += 1
             sleep(self.module.params['sleep_between_checks'])
-            # print(skip_reason)
+                # print(skip_reason)
         if consecutive_good == self.module.params['consecutive_good_checks']:
             return False, None
         return True, skip_reason

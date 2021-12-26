@@ -331,7 +331,7 @@ class ClcSnapshot:
         package module
         :return: the package dictionary object
         """
-        argument_spec = dict(
+        return dict(
             server_ids=dict(type='list', required=True, elements='str'),
             expiration_days=dict(default=7, type='int'),
             wait=dict(default=True),
@@ -342,7 +342,6 @@ class ClcSnapshot:
                     'absent',
                     'restore']),
         )
-        return argument_spec
 
     def _get_servers_from_clc(self, server_list, message):
         """

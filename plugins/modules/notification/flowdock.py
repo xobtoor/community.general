@@ -144,10 +144,7 @@ def main():
     else:
         url = "https://api.flowdock.com/v1/messages/chat/%s" % (token)
 
-    params = {}
-
-    # required params
-    params['content'] = module.params["msg"]
+    params = {'content': module.params["msg"]}
 
     # required params for the 'chat' type
     if module.params['external_user_name']:

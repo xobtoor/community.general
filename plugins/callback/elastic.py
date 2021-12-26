@@ -237,10 +237,7 @@ class ElasticSource(object):
                 enriched_error_message = self.enrich_error_message(res)
                 status = "failure"
             elif host_data.status == 'skipped':
-                if 'skip_reason' in res:
-                    message = res['skip_reason']
-                else:
-                    message = 'skipped'
+                message = res['skip_reason'] if 'skip_reason' in res else 'skipped'
                 status = "unknown"
 
         with capture_span(task_data.name,
@@ -403,10 +400,7 @@ class CallbackModule(CallbackBase):
         )
 
     def v2_playbook_on_stats(self, stats):
-        if self.errors == 0:
-            status = "success"
-        else:
-            status = "failure"
+        status = "success" if self.errors == 0 else "failure"
         self.elastic.generate_distributed_traces(
             self.tasks_data,
             status,

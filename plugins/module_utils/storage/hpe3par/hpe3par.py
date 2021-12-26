@@ -25,7 +25,7 @@ def convert_to_binary_multiple(size_with_unit):
 
     size = size_with_unit.replace(" ", "").split('iB')[0]
     size_kib = basic.human_to_bytes(size)
-    return int(size_kib / (1024 * 1024))
+    return int(size_kib / 1024**2)
 
 
 storage_system_spec = {

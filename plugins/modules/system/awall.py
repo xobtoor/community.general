@@ -74,16 +74,11 @@ def activate(module):
 def is_policy_enabled(module, name):
     cmd = "%s list" % (AWALL_PATH)
     rc, stdout, stderr = module.run_command(cmd)
-    if re.search(r"^%s\s+enabled" % name, stdout, re.MULTILINE):
-        return True
-    return False
+    return bool(re.search(r"^%s\s+enabled" % name, stdout, re.MULTILINE))
 
 
 def enable_policy(module, names, act):
-    policies = []
-    for name in names:
-        if not is_policy_enabled(module, name):
-            policies.append(name)
+    policies = [name for name in names if not is_policy_enabled(module, name)]
     if not policies:
         module.exit_json(changed=False, msg="policy(ies) already enabled")
     names = " ".join(policies)
@@ -100,10 +95,7 @@ def enable_policy(module, names, act):
 
 
 def disable_policy(module, names, act):
-    policies = []
-    for name in names:
-        if is_policy_enabled(module, name):
-            policies.append(name)
+    policies = [name for name in names if is_policy_enabled(module, name)]
     if not policies:
         module.exit_json(changed=False, msg="policy(ies) already disabled")
     names = " ".join(policies)

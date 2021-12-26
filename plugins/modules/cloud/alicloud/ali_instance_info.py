@@ -428,9 +428,8 @@ def main():
         filters['instance_name'] = names[0]
 
     for inst in ecs.describe_instances(**filters):
-        if name_prefix:
-            if not str(inst.instance_name).startswith(name_prefix):
-                continue
+        if name_prefix and not str(inst.instance_name).startswith(name_prefix):
+            continue
         volumes = ecs.describe_disks(instance_id=inst.id)
         setattr(inst, 'block_device_mappings', volumes)
         setattr(inst, 'user_data', inst.describe_user_data())

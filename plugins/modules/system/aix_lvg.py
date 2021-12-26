@@ -226,11 +226,7 @@ def create_extend_vg(module, vg, pvs, pp_size, vg_type, force, vg_validation):
 def reduce_vg(module, vg, pvs, vg_validation):
     vg_state, msg = vg_validation
 
-    if vg_state is False:
-        changed = False
-        return changed, msg
-
-    elif vg_state is None:
+    if vg_state is False or vg_state is None:
         changed = False
         return changed, msg
 
@@ -243,10 +239,7 @@ def reduce_vg(module, vg, pvs, vg_validation):
         if rc != 0:
             module.fail_json(msg="Failing to execute '%s' command." % lsvg_cmd)
 
-        pvs_to_remove = []
-        for line in current_pvs.splitlines()[2:]:
-            pvs_to_remove.append(line.split()[0])
-
+        pvs_to_remove = [line.split()[0] for line in current_pvs.splitlines()[2:]]
         reduce_msg = "Volume group '%s' removed." % vg
     else:
         pvs_to_remove = pvs
@@ -331,11 +324,7 @@ def main():
     vg = module.params['vg']
     vg_type = module.params['vg_type']
 
-    if pp_size is None:
-        pp_size = ''
-    else:
-        pp_size = "-s %s" % pp_size
-
+    pp_size = '' if pp_size is None else "-s %s" % pp_size
     vg_validation = _validate_vg(module, vg)
 
     if state == 'present':
@@ -349,7 +338,7 @@ def main():
     elif state == 'absent':
         changed, msg = reduce_vg(module, vg, pvs, vg_validation)
 
-    elif state == 'varyon' or state == 'varyoff':
+    elif state in ['varyon', 'varyoff']:
         changed, msg = state_vg(module, vg, state, vg_validation)
 
     else:

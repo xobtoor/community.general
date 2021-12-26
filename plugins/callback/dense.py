@@ -236,9 +236,14 @@ class CallbackModule(CallbackModule_default):
 
         # Remove empty attributes (list, dict, str)
         for attr in result.copy():
-            if isinstance(result[attr], (MutableSequence, MutableMapping, binary_type, text_type)):
-                if not result[attr]:
-                    del(result[attr])
+            if (
+                isinstance(
+                    result[attr],
+                    (MutableSequence, MutableMapping, binary_type, text_type),
+                )
+                and not result[attr]
+            ):
+                del(result[attr])
 
     def _handle_exceptions(self, result):
         if 'exception' in result:
@@ -291,13 +296,9 @@ class CallbackModule(CallbackModule_default):
         self._clean_results(result._result)
 
         dump = ''
-        if result._task.action == 'include':
+        if result._task.action == 'include' or status == 'ok':
             return
-        elif status == 'ok':
-            return
-        elif status == 'ignored':
-            dump = self._handle_exceptions(result._result)
-        elif status == 'failed':
+        elif status in ['ignored', 'failed']:
             dump = self._handle_exceptions(result._result)
         elif status == 'unreachable':
             dump = result._result['msg']

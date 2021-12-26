@@ -592,7 +592,9 @@ class ClcModifyServer:
         if wait:
             # Requests.WaitUntilComplete() returns the count of failed requests
             failed_requests_count = sum(
-                [request.WaitUntilComplete() for request in request_list])
+                request.WaitUntilComplete() for request in request_list
+            )
+
 
             if failed_requests_count > 0:
                 module.fail_json(

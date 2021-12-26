@@ -179,12 +179,11 @@ class ClcAntiAffinityPolicy:
         Define the argument spec for the ansible module
         :return: argument spec dictionary
         """
-        argument_spec = dict(
+        return dict(
             name=dict(required=True),
             location=dict(required=True),
             state=dict(default='present', choices=['present', 'absent']),
         )
-        return argument_spec
 
     # Module Behavior Goodness
     def process_request(self):
@@ -243,13 +242,9 @@ class ClcAntiAffinityPolicy:
         :param p: datacenter to get policies from
         :return: policies in the datacenter
         """
-        response = {}
-
         policies = self.clc.v2.AntiAffinity.GetAll(location=p['location'])
 
-        for policy in policies:
-            response[policy.name] = policy
-        return response
+        return {policy.name: policy for policy in policies}
 
     def _create_policy(self, p):
         """
@@ -314,9 +309,7 @@ class ClcAntiAffinityPolicy:
         policy = self._policy_exists(policy_name=p['name'])
         if not policy:
             changed = True
-            policy = None
-            if not self.module.check_mode:
-                policy = self._create_policy(p)
+            policy = self._create_policy(p) if not self.module.check_mode else None
         return changed, policy
 
     @staticmethod

@@ -100,7 +100,6 @@ class GConf2Preference(object):
     def call(self, call_type, fail_onerr=True):
         """ Helper function to perform gconftool-2 operations """
         config_source = ''
-        direct = ''
         changed = False
         out = ''
 
@@ -110,9 +109,7 @@ class GConf2Preference(object):
             config_source = "--config-source " + self.config_source
 
         # If direct is true, create the argument
-        if self.direct:
-            direct = "--direct"
-
+        direct = "--direct" if self.direct else ''
         # Execute the call
         cmd = "gconftool-2 "
         try:
@@ -204,21 +201,16 @@ def main():
 
     # Check if the current value equals the value we want to set.  If not, make
     # a change
-    if current_value != value:
-        # If check mode, we know a change would have occurred.
-        if module.check_mode:
-            # So we will set the change to True
-            change = True
-            # And set the new_value to the value that would have been set
-            new_value = value
-        # If not check mode make the change.
-        else:
-            change, new_value = gconf_pref.call(state)
-    # If the value we want to set is the same as the current_value, we will
-    # set the new_value to the current_value for reporting
-    else:
+    if current_value == value:
         new_value = current_value
 
+    elif module.check_mode:
+        # So we will set the change to True
+        change = True
+        # And set the new_value to the value that would have been set
+        new_value = value
+    else:
+        change, new_value = gconf_pref.call(state)
     facts = dict(gconftool2={'changed': change,
                              'key': key,
                              'value_type': value_type,

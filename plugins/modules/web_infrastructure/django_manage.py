@@ -323,12 +323,12 @@ def main():
     changed = False
 
     lines = out.split('\n')
-    filt = globals().get(command_bin + "_filter_output", None)
+    filt = globals().get(command_bin + "_filter_output")
     if filt:
         filtered_output = list(filter(filt, lines))
         if len(filtered_output):
             changed = True
-    check_changed = globals().get("{0}_check_changed".format(command_bin), None)
+    check_changed = globals().get("{0}_check_changed".format(command_bin))
     if check_changed:
         changed = check_changed(out)
 

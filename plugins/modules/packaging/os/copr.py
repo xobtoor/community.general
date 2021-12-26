@@ -208,15 +208,14 @@ class CoprModule(object):
                     version = "9"
                 chroot = "epel-{0}".format(version)
                 distribution = "epel"
+            elif str(status_code) != "404":
+                self.raise_exception(
+                    "This repository does not have any builds yet so you cannot enable it now."
+                )
             else:
-                if str(status_code) != "404":
-                    self.raise_exception(
-                        "This repository does not have any builds yet so you cannot enable it now."
-                    )
-                else:
-                    self.raise_exception(
-                        "Chroot {0} does not exist in {1}".format(self.chroot, self.name)
-                    )
+                self.raise_exception(
+                    "Chroot {0} does not exist in {1}".format(self.chroot, self.name)
+                )
 
     def _enable_repo(self, repo_filename_path, repo_content=None):
         """Write information to a repo file.
@@ -281,9 +280,8 @@ class CoprModule(object):
             The repository that a user wants to enable, disable, or remove.
         """
         repo_id = "copr:{0}:{1}:{2}".format(self.host, self.user, self.project)
-        if repo_id not in self.base.repos:
-            if self._get_repo_with_old_id() is None:
-                return None
+        if repo_id not in self.base.repos and self._get_repo_with_old_id() is None:
+            return None
         return self.base.repos[repo_id]
 
     def _disable_repo(self, repo_filename_path):
@@ -308,11 +306,13 @@ class CoprModule(object):
             repo_content_api = self._download_repo_info()
             with open(repo_filename_path, "r") as file:
                 repo_content_file = file.read()
-            if repo_content_file != repo_content_api:
-                if not self.resolve_differences(
+            if (
+                repo_content_file != repo_content_api
+                and not self.resolve_differences(
                     repo_content_file, repo_content_api, repo_filename_path
-                ):
-                    return False
+                )
+            ):
+                return False
             if not self.check_mode:
                 self.base.conf.write_raw_configfile(
                     repo.repofile, repo_id, self.base.conf.substitutions, {"enabled": "0"},
@@ -344,10 +344,12 @@ class CoprModule(object):
                 self._enable_repo(repo_filename_path, repo_content_api)
         else:
             repo_file_lines.remove("enabled=1")
-            if " ".join(repo_api_lines) != " ".join(repo_file_lines):
-                if not self.check_mode:
-                    os.remove(repo_filename_path)
-                    self._enable_repo(repo_filename_path, repo_content_api)
+            if (
+                " ".join(repo_api_lines) != " ".join(repo_file_lines)
+                and not self.check_mode
+            ):
+                os.remove(repo_filename_path)
+                self._enable_repo(repo_filename_path, repo_content_api)
         return True
 
     def _remove_repo(self):
@@ -374,7 +376,7 @@ class CoprModule(object):
             Dictionary with information that the ansible module displays to the user at the end of the run.
         """
         self.need_root()
-        state = dict()
+        state = {}
         repo_filename = "_copr:{0}:{1}:{2}.repo".format(self.host, self.user, self.project)
         state["repo"] = "{0}/{1}/{2}".format(self.host, self.user, self.project)
         state["repo_filename"] = repo_filename
@@ -464,9 +466,9 @@ def run_module():
     )
     state = copr_module.run()
 
-    info = "Please note that this repository is not part of the main distribution"
-
     if params["state"] == "enabled" and state["state"]:
+        info = "Please note that this repository is not part of the main distribution"
+
         module.exit_json(
             changed=state["state"],
             msg=state["msg"],

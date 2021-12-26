@@ -97,17 +97,14 @@ class CmdMixin(object):
 
     @property
     def module_formats(self):
-        result = {}
-        for param in self.module.params.keys():
-            result[param] = ArgFormat(param)
-        return result
+        return {param: ArgFormat(param) for param in self.module.params.keys()}
 
     @property
     def custom_formats(self):
-        result = {}
-        for param, fmt_spec in self.command_args_formats.items():
-            result[param] = ArgFormat(param, **fmt_spec)
-        return result
+        return {
+            param: ArgFormat(param, **fmt_spec)
+            for param, fmt_spec in self.command_args_formats.items()
+        }
 
     def _calculate_args(self, extra_params=None, params=None):
         def add_arg_formatted_param(_cmd_args, arg_format, _value):

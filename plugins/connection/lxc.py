@@ -81,11 +81,8 @@ class Connection(ConnectionBase):
     def _communicate(pid, in_data, stdin, stdout, stderr):
         buf = {stdout: [], stderr: []}
         read_fds = [stdout, stderr]
-        if in_data:
-            write_fds = [stdin]
-        else:
-            write_fds = []
-        while len(read_fds) > 0 or len(write_fds) > 0:
+        write_fds = [stdin] if in_data else []
+        while read_fds or write_fds:
             try:
                 ready_reads, ready_writes, dummy = select.select(read_fds, write_fds, [])
             except select.error as e:

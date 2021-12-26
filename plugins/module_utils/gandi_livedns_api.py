@@ -201,24 +201,23 @@ class GandiLiveDNSAPI(object):
             if values is not None and set(cur_record['rrset_values']) != set(values):
                 do_update = True
 
-            if do_update:
-                if self.module.check_mode:
-                    result = dict(
-                        rrset_type=type,
-                        rrset_name=record,
-                        rrset_values=values,
-                        rrset_ttl=ttl
-                    )
-                else:
-                    self.update_record(record, type, values, ttl, domain)
-
-                    records = self.get_records(record, type, domain)
-                    result = records[0]
-                self.changed = True
-                return result, self.changed
-            else:
+            if not do_update:
                 return cur_record, self.changed
 
+            if self.module.check_mode:
+                result = dict(
+                    rrset_type=type,
+                    rrset_name=record,
+                    rrset_values=values,
+                    rrset_ttl=ttl
+                )
+            else:
+                self.update_record(record, type, values, ttl, domain)
+
+                records = self.get_records(record, type, domain)
+                result = records[0]
+            self.changed = True
+            return result, self.changed
         if self.module.check_mode:
             new_record = dict(
                 rrset_type=type,

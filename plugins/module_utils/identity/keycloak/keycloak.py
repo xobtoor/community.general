@@ -142,8 +142,7 @@ def get_token(module_params):
             'password': auth_password,
         }
         # Remove empty items, for instance missing client_secret
-        payload = dict(
-            (k, v) for k, v in temp_payload.items() if v is not None)
+        payload = {k: v for k, v in temp_payload.items() if v is not None}
         try:
             r = json.loads(to_native(open_url(auth_url, method='POST',
                                               validate_certs=validate_certs,
@@ -201,17 +200,17 @@ def is_struct_included(struct1, struct2, exclude=None):
                 for item2 in struct2:
                     if not is_struct_included(item1, item2, exclude):
                         return False
-            else:
-                if item1 not in struct2:
-                    return False
+            elif item1 not in struct2:
+                return False
         return True
     elif isinstance(struct1, dict) and isinstance(struct2, dict):
         try:
-            for key in struct1:
-                if not (exclude and key in exclude):
-                    if not is_struct_included(struct1[key], struct2[key], exclude):
-                        return False
-            return True
+            return not any(
+                (not exclude or key not in exclude)
+                and not is_struct_included(struct1[key], struct2[key], exclude)
+                for key in struct1
+            )
+
         except KeyError:
             return False
     elif isinstance(struct1, bool) and isinstance(struct2, bool):
@@ -580,7 +579,7 @@ class KeycloakAPI(object):
         result = self.get_client_templates(realm)
         if isinstance(result, list):
             result = [x for x in result if x['name'] == name]
-            if len(result) > 0:
+            if result:
                 return result[0]
         return None
 
@@ -757,7 +756,7 @@ class KeycloakAPI(object):
         # only lookup the name if cid isn't provided.
         # in the case that both are provided, prefer the ID, since it's one
         # less lookup.
-        if cid is None and name is not None:
+        if cid is None:
             for clientscope in self.get_clientscopes(realm=realm):
                 if clientscope['name'] == name:
                     cid = clientscope['id']
@@ -989,7 +988,7 @@ class KeycloakAPI(object):
         # only lookup the name if groupid isn't provided.
         # in the case that both are provided, prefer the ID, since it's one
         # less lookup.
-        if groupid is None and name is not None:
+        if groupid is None:
             for group in self.get_groups(realm=realm):
                 if group['name'] == name:
                     groupid = group['id']
@@ -1345,10 +1344,12 @@ class KeycloakAPI(object):
         :return: HTTPResponse object on success
         """
         try:
-            newSubFlow = {}
-            newSubFlow["alias"] = subflowName
-            newSubFlow["provider"] = "registration-page-form"
-            newSubFlow["type"] = "basic-flow"
+            newSubFlow = {
+                'alias': subflowName,
+                'provider': 'registration-page-form',
+                'type': 'basic-flow',
+            }
+
             open_url(
                 URL_AUTHENTICATION_FLOW_EXECUTIONS_FLOW.format(
                     url=self.baseurl,
@@ -1368,9 +1369,11 @@ class KeycloakAPI(object):
         :return: HTTPResponse object on success
         """
         try:
-            newExec = {}
-            newExec["provider"] = execution["providerId"]
-            newExec["requirement"] = execution["requirement"]
+            newExec = {
+                'provider': execution["providerId"],
+                'requirement': execution["requirement"],
+            }
+
             open_url(
                 URL_AUTHENTICATION_FLOW_EXECUTIONS_EXECUTION.format(
                     url=self.baseurl,
@@ -1392,7 +1395,7 @@ class KeycloakAPI(object):
         """
         try:
             if diff > 0:
-                for i in range(diff):
+                for _ in range(diff):
                     open_url(
                         URL_AUTHENTICATION_EXECUTION_RAISE_PRIORITY.format(
                             url=self.baseurl,
@@ -1401,7 +1404,7 @@ class KeycloakAPI(object):
                         method='POST',
                         headers=self.restheaders)
             elif diff < 0:
-                for i in range(-diff):
+                for _ in range(-diff):
                     open_url(
                         URL_AUTHENTICATION_EXECUTION_LOWER_PRIORITY.format(
                             url=self.baseurl,

@@ -165,14 +165,13 @@ class ClcBlueprintPackage:
         package module
         :return: the package dictionary object
         """
-        argument_spec = dict(
+        return dict(
             server_ids=dict(type='list', elements='str', required=True),
             package_id=dict(required=True),
             package_params=dict(type='dict', default={}),
             wait=dict(default=True),   # @FIXME should be bool?
             state=dict(default='present', choices=['present'])
         )
-        return argument_spec
 
     def ensure_package_installed(self, server_ids, package_id, package_params):
         """

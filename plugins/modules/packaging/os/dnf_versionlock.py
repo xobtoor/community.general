@@ -184,22 +184,23 @@ def match(entry, pattern):
     m = NEVRA_RE.match(entry)
     if not m:
         return False
-    for name in (
-        '%s' % m["name"],
-        '%s.%s' % (m["name"], m["arch"]),
-        '%s-%s' % (m["name"], m["version"]),
-        '%s-%s-%s' % (m["name"], m["version"], m["release"]),
-        '%s-%s:%s' % (m["name"], m["epoch"], m["version"]),
-        '%s-%s-%s.%s' % (m["name"], m["version"], m["release"], m["arch"]),
-        '%s-%s:%s-%s' % (m["name"], m["epoch"], m["version"], m["release"]),
-        '%s:%s-%s-%s.%s' % (m["epoch"], m["name"], m["version"], m["release"],
-                            m["arch"]),
-        '%s-%s:%s-%s.%s' % (m["name"], m["epoch"], m["version"], m["release"],
-                            m["arch"])
-    ):
-        if fnmatch.fnmatch(name, pattern):
-            return True
-    return False
+    return any(
+        fnmatch.fnmatch(name, pattern)
+        for name in (
+            '%s' % m["name"],
+            '%s.%s' % (m["name"], m["arch"]),
+            '%s-%s' % (m["name"], m["version"]),
+            '%s-%s-%s' % (m["name"], m["version"], m["release"]),
+            '%s-%s:%s' % (m["name"], m["epoch"], m["version"]),
+            '%s-%s-%s.%s' % (m["name"], m["version"], m["release"], m["arch"]),
+            '%s-%s:%s-%s'
+            % (m["name"], m["epoch"], m["version"], m["release"]),
+            '%s:%s-%s-%s.%s'
+            % (m["epoch"], m["name"], m["version"], m["release"], m["arch"]),
+            '%s-%s:%s-%s.%s'
+            % (m["name"], m["epoch"], m["version"], m["release"], m["arch"]),
+        )
+    )
 
 
 def get_packages(module, patterns, only_installed=False):
@@ -301,15 +302,13 @@ def main():
 
     elif state == "absent":
 
-        if raw:
             # Add raw patterns as specs to delete.
-            for p in patterns:
+        for p in patterns:
+            if raw:
                 if p in locklist_pre:
                     specs_todelete.append(p)
 
-        else:
-            # Get patterns that match the some line in the locklist.
-            for p in patterns:
+            else:
                 for e in locklist_pre:
                     if match(e, p):
                         specs_todelete.append(p)
@@ -336,9 +335,8 @@ def main():
     }
     if not module.check_mode:
         response["locklist_post"] = do_versionlock(module, "list").split()
-    else:
-        if state == "clean":
-            response["locklist_post"] = []
+    elif state == "clean":
+        response["locklist_post"] = []
 
     module.exit_json(**response)
 

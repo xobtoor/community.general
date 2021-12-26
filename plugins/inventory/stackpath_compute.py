@@ -221,9 +221,10 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
             :param path: the path to the inventory config file
             :return the contents of the config file
         '''
-        if super(InventoryModule, self).verify_file(path):
-            if path.endswith(('stackpath_compute.yml', 'stackpath_compute.yaml')):
-                return True
+        if super(InventoryModule, self).verify_file(path) and path.endswith(
+            ('stackpath_compute.yml', 'stackpath_compute.yaml')
+        ):
+            return True
         display.debug(
             "stackpath_compute inventory filename must end with \
             'stackpath_compute.yml' or 'stackpath_compute.yaml'"

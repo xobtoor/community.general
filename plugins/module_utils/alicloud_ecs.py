@@ -72,12 +72,11 @@ def ecs_argument_spec():
 
 def get_acs_connection_info(params):
 
-    ecs_params = dict(acs_access_key_id=params.get('alicloud_access_key'),
+    return dict(acs_access_key_id=params.get('alicloud_access_key'),
                       acs_secret_access_key=params.get('alicloud_secret_key'),
                       security_token=params.get('alicloud_security_token'),
                       ecs_role_name=params.get('ecs_role_name'),
                       user_agent='Ansible-Provider-Alicloud')
-    return ecs_params
 
 
 def connect_to_acs(acs_module, region, **params):
@@ -103,13 +102,17 @@ def get_assume_role(params):
         assume_role['alicloud_assume_role_policy'] = params['assume_role'].get('policy')
 
     assume_role_params = {
-        'role_arn': params.get('alicloud_assume_role_arn') if params.get('alicloud_assume_role_arn') else assume_role.get('alicloud_assume_role_arn'),
-        'role_session_name': params.get('alicloud_assume_role_session_name') if params.get('alicloud_assume_role_session_name')
-        else assume_role.get('alicloud_assume_role_session_name'),
-        'duration_seconds': params.get('alicloud_assume_role_session_expiration') if params.get('alicloud_assume_role_session_expiration')
-        else assume_role.get('alicloud_assume_role_session_expiration', 3600),
-        'policy': assume_role.get('alicloud_assume_role_policy', {})
+        'role_arn': params.get('alicloud_assume_role_arn')
+        or assume_role.get('alicloud_assume_role_arn'),
+        'role_session_name': params.get('alicloud_assume_role_session_name')
+        or assume_role.get('alicloud_assume_role_session_name'),
+        'duration_seconds': params.get(
+            'alicloud_assume_role_session_expiration'
+        )
+        or assume_role.get('alicloud_assume_role_session_expiration', 3600),
+        'policy': assume_role.get('alicloud_assume_role_policy', {}),
     }
+
 
     try:
         sts = connect_to_acs(footmark.sts, params.get('alicloud_region'), **sts_params).assume_role(**assume_role_params).read()
@@ -122,7 +125,11 @@ def get_assume_role(params):
 
 def get_profile(params):
     if not params['alicloud_access_key'] and not params['ecs_role_name'] and params['profile']:
-        path = params['shared_credentials_file'] if params['shared_credentials_file'] else os.getenv('HOME') + '/.aliyun/config.json'
+        path = (
+            params['shared_credentials_file']
+            or os.getenv('HOME') + '/.aliyun/config.json'
+        )
+
         auth = {}
         with open(path, 'r') as f:
             for pro in json.load(f)['profiles']:

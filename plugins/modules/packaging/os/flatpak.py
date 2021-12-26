@@ -240,11 +240,10 @@ def _match_installed_flat_name(module, binary, name, method):
 
     if matched_flatpak_name:
         return matched_flatpak_name
-    else:
-        result['msg'] = "Flatpak removal failed: Could not match any installed flatpaks to " +\
-            "the name `{0}`. ".format(_parse_flatpak_name(name)) +\
-            "If you used a URL, try using the reverse DNS name of the flatpak"
-        module.fail_json(**result)
+    result['msg'] = "Flatpak removal failed: Could not match any installed flatpaks to " +\
+        "the name `{0}`. ".format(_parse_flatpak_name(name)) +\
+        "If you used a URL, try using the reverse DNS name of the flatpak"
+    module.fail_json(**result)
 
 
 def _match_flat_using_outdated_flatpak_format(module, binary, parsed_name, method):
@@ -266,21 +265,18 @@ def _match_flat_using_flatpak_column_feature(module, binary, parsed_name, method
 
 
 def _parse_flatpak_name(name):
-    if name.startswith('http://') or name.startswith('https://'):
-        file_name = urlparse(name).path.split('/')[-1]
-        file_name_without_extension = file_name.split('.')[0:-1]
-        common_name = ".".join(file_name_without_extension)
-    else:
-        common_name = name
-    return common_name
+    if not name.startswith('http://') and not name.startswith('https://'):
+        return name
+    file_name = urlparse(name).path.split('/')[-1]
+    file_name_without_extension = file_name.split('.')[:-1]
+    return ".".join(file_name_without_extension)
 
 
 def _flatpak_version(module, binary):
     global result
     command = [binary, "--version"]
     output = _flatpak_command(module, False, command)
-    version_number = output.split()[1]
-    return version_number
+    return output.split()[1]
 
 
 def _flatpak_command(module, noop, command, ignore_failure=False):

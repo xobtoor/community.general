@@ -746,10 +746,7 @@ class ClcLoadBalancer:
         for node in nodes_to_check:
             if not node.get('status'):
                 node['status'] = 'enabled'
-            if node in nodes:
-                result = True
-            else:
-                result = False
+            result = node in nodes
         return result
 
     def set_loadbalancernodes(self, alias, location, lb_id, pool_id, nodes):
@@ -797,7 +794,7 @@ class ClcLoadBalancer:
             if node not in nodes:
                 changed = True
                 nodes.append(node)
-        if changed is True and not self.module.check_mode:
+        if changed and not self.module.check_mode:
             result = self.set_loadbalancernodes(
                 alias,
                 location,
@@ -828,7 +825,7 @@ class ClcLoadBalancer:
             if node in nodes:
                 changed = True
                 nodes.remove(node)
-        if changed is True and not self.module.check_mode:
+        if changed and not self.module.check_mode:
             result = self.set_loadbalancernodes(
                 alias,
                 location,
@@ -863,7 +860,7 @@ class ClcLoadBalancer:
         Define the argument spec for the ansible module
         :return: argument spec dictionary
         """
-        argument_spec = dict(
+        return dict(
             name=dict(required=True),
             description=dict(default=None),
             location=dict(required=True),
@@ -882,7 +879,6 @@ class ClcLoadBalancer:
                     'nodes_present',
                     'nodes_absent'])
         )
-        return argument_spec
 
     def _set_clc_credentials_from_env(self):
         """

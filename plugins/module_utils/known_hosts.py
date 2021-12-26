@@ -32,10 +32,11 @@ def is_ssh_url(url):
 
     if "@" in url and "://" not in url:
         return True
-    for scheme in "ssh://", "git+ssh://", "ssh+git://":
-        if url.startswith(scheme):
-            return True
-    return False
+
+    return any(
+        url.startswith(scheme)
+        for scheme in ("ssh://", "git+ssh://", "ssh+git://")
+    )
 
 
 def get_fqdn_and_port(repo_url):
@@ -69,7 +70,7 @@ def get_fqdn_and_port(repo_url):
             if match:
                 fqdn, port = match.groups()
             elif ":" in fqdn:
-                fqdn, port = fqdn.split(":")[0:2]
+                fqdn, port = fqdn.split(":")[:2]
     return fqdn, port
 
 
@@ -125,10 +126,8 @@ def not_in_host_file(self, host):
                 except Exception:
                     # invalid hashed host key, skip it
                     continue
-            else:
-                # standard host file entry
-                if host in tokens[0]:
-                    return False
+            elif host in tokens[0]:
+                return False
 
     return True
 

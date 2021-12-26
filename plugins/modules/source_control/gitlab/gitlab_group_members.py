@@ -207,10 +207,7 @@ class GitLabGroup(object):
 
     # check if the user is a member of the group
     def is_user_a_member(self, members, gitlab_user_id):
-        for member in members:
-            if member.id == gitlab_user_id:
-                return True
-        return False
+        return any(member.id == gitlab_user_id for member in members)
 
     # add user to a group
     def add_member_to_group(self, gitlab_user_id, gitlab_group_id, access_level):
@@ -313,10 +310,17 @@ def main():
 
     members = []
     if module.params['gitlab_user'] is not None:
-        gitlab_users_access = []
         gitlab_users = module.params['gitlab_user']
-        for gl_user in gitlab_users:
-            gitlab_users_access.append({'name': gl_user, 'access_level': access_level_int[access_level] if access_level else None})
+        gitlab_users_access = [
+            {
+                'name': gl_user,
+                'access_level': access_level_int[access_level]
+                if access_level
+                else None,
+            }
+            for gl_user in gitlab_users
+        ]
+
     elif module.params['gitlab_users_access'] is not None:
         gitlab_users_access = module.params['gitlab_users_access']
         for user_level in gitlab_users_access:
@@ -378,49 +382,47 @@ def main():
                 changed_users.append("User, '%s', is not a member in the group. No change to report" % gitlab_user['name'])
                 changed_data.append({'gitlab_user': gitlab_user['name'], 'result': 'OK',
                                      'msg': "User, '%s', is not a member in the group. No change to report" % gitlab_user['name']})
-        # in case that a user is a member
-        else:
-            if state == 'present':
-                # compare the access level
-                user_access_level = group.get_user_access_level(members, gitlab_user_id)
-                if user_access_level == gitlab_user['access_level']:
-                    changed_users.append("User, '%s', is already a member in the group. No change to report" % gitlab_user['name'])
-                    changed_data.append({'gitlab_user': gitlab_user['name'], 'result': 'OK',
-                                         'msg': "User, '%s', is already a member in the group. No change to report" % gitlab_user['name']})
-                else:
-                    # update the access level for the user
-                    try:
-                        if not module.check_mode:
-                            group.update_user_access_level(members, gitlab_user_id, gitlab_user['access_level'])
-                        changed = True
-                        changed_users.append("Successfully updated the access level for the user, '%s'" % gitlab_user['name'])
-                        changed_data.append({'gitlab_user': gitlab_user['name'], 'result': 'CHANGED',
-                                             'msg': "Successfully updated the access level for the user, '%s'" % gitlab_user['name']})
-                    except (gitlab.exceptions.GitlabUpdateError) as e:
-                        error = True
-                        changed_users.append("Failed to updated the access level for the user, '%s'" % gitlab_user['name'])
-                        changed_data.append({'gitlab_user': gitlab_user['name'], 'result': 'FAILED',
-                                             'msg': "Not allowed to update the access level for the member, %s: %s" % (gitlab_user['name'], e)})
+        elif state == 'present':
+            # compare the access level
+            user_access_level = group.get_user_access_level(members, gitlab_user_id)
+            if user_access_level == gitlab_user['access_level']:
+                changed_users.append("User, '%s', is already a member in the group. No change to report" % gitlab_user['name'])
+                changed_data.append({'gitlab_user': gitlab_user['name'], 'result': 'OK',
+                                     'msg': "User, '%s', is already a member in the group. No change to report" % gitlab_user['name']})
             else:
-                # remove the user from the group
+                # update the access level for the user
                 try:
                     if not module.check_mode:
-                        group.remove_user_from_group(gitlab_user_id, gitlab_group_id)
+                        group.update_user_access_level(members, gitlab_user_id, gitlab_user['access_level'])
                     changed = True
-                    changed_users.append("Successfully removed user, '%s', from the group" % gitlab_user['name'])
+                    changed_users.append("Successfully updated the access level for the user, '%s'" % gitlab_user['name'])
                     changed_data.append({'gitlab_user': gitlab_user['name'], 'result': 'CHANGED',
-                                         'msg': "Successfully removed user, '%s', from the group" % gitlab_user['name']})
-                except (gitlab.exceptions.GitlabDeleteError) as e:
+                                         'msg': "Successfully updated the access level for the user, '%s'" % gitlab_user['name']})
+                except (gitlab.exceptions.GitlabUpdateError) as e:
                     error = True
-                    changed_users.append("Failed to removed user, '%s', from the group" % gitlab_user['name'])
+                    changed_users.append("Failed to updated the access level for the user, '%s'" % gitlab_user['name'])
                     changed_data.append({'gitlab_user': gitlab_user['name'], 'result': 'FAILED',
-                                         'msg': "Failed to remove user, '%s' from the group: %s" % (gitlab_user['name'], e)})
+                                         'msg': "Not allowed to update the access level for the member, %s: %s" % (gitlab_user['name'], e)})
+        else:
+            # remove the user from the group
+            try:
+                if not module.check_mode:
+                    group.remove_user_from_group(gitlab_user_id, gitlab_group_id)
+                changed = True
+                changed_users.append("Successfully removed user, '%s', from the group" % gitlab_user['name'])
+                changed_data.append({'gitlab_user': gitlab_user['name'], 'result': 'CHANGED',
+                                     'msg': "Successfully removed user, '%s', from the group" % gitlab_user['name']})
+            except (gitlab.exceptions.GitlabDeleteError) as e:
+                error = True
+                changed_users.append("Failed to removed user, '%s', from the group" % gitlab_user['name'])
+                changed_data.append({'gitlab_user': gitlab_user['name'], 'result': 'FAILED',
+                                     'msg': "Failed to remove user, '%s' from the group: %s" % (gitlab_user['name'], e)})
 
     # if state = present and purge_users set delete users which are in members having give access level but not in gitlab_users
     if state == 'present' and purge_users:
-        uppercase_names_in_gitlab_users_access = []
-        for name in gitlab_users_access:
-            uppercase_names_in_gitlab_users_access.append(name['name'].upper())
+        uppercase_names_in_gitlab_users_access = [
+            name['name'].upper() for name in gitlab_users_access
+        ]
 
         for member in members:
             if member.access_level in purge_users and member.username.upper() not in uppercase_names_in_gitlab_users_access:

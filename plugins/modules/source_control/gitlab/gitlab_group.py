@@ -269,10 +269,12 @@ class GitLabGroup(object):
         changed = False
 
         for arg_key, arg_value in arguments.items():
-            if arguments[arg_key] is not None:
-                if getattr(group, arg_key) != arguments[arg_key]:
-                    setattr(group, arg_key, arguments[arg_key])
-                    changed = True
+            if (
+                arguments[arg_key] is not None
+                and getattr(group, arg_key) != arguments[arg_key]
+            ):
+                setattr(group, arg_key, arguments[arg_key])
+                changed = True
 
         return (changed, group)
 

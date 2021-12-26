@@ -136,23 +136,22 @@ def get_all_keys(session):
 
 
 def create_key(session, name, pubkey, check_mode):
-    if check_mode:
-        from datetime import datetime
-        now = datetime.utcnow()
-        return {
-            'id': 0,
-            'key': pubkey,
-            'title': name,
-            'url': 'http://example.com/CHECK_MODE_GITHUB_KEY',
-            'created_at': datetime.strftime(now, '%Y-%m-%dT%H:%M:%SZ'),
-            'read_only': False,
-            'verified': False
-        }
-    else:
+    if not check_mode:
         return session.request(
             'POST',
             API_BASE + '/user/keys',
             data=json.dumps({'title': name, 'key': pubkey})).json()
+    from datetime import datetime
+    now = datetime.utcnow()
+    return {
+        'id': 0,
+        'key': pubkey,
+        'title': name,
+        'url': 'http://example.com/CHECK_MODE_GITHUB_KEY',
+        'created_at': datetime.strftime(now, '%Y-%m-%dT%H:%M:%SZ'),
+        'read_only': False,
+        'verified': False
+    }
 
 
 def delete_keys(session, to_delete, check_mode):

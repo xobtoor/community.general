@@ -261,8 +261,11 @@ def set_acl(consul_client, configuration):
     :return: the output of setting the ACL
     """
     acls_as_json = decode_acls_as_json(consul_client.acl.list())
-    existing_acls_mapped_by_name = dict((acl.name, acl) for acl in acls_as_json if acl.name is not None)
-    existing_acls_mapped_by_token = dict((acl.token, acl) for acl in acls_as_json)
+    existing_acls_mapped_by_name = {
+        acl.name: acl for acl in acls_as_json if acl.name is not None
+    }
+
+    existing_acls_mapped_by_token = {acl.token: acl for acl in acls_as_json}
     if None in existing_acls_mapped_by_token:
         raise AssertionError("expecting ACL list to be associated to a token: %s" %
                              existing_acls_mapped_by_token[None])
@@ -273,12 +276,11 @@ def set_acl(consul_client, configuration):
 
     if configuration.token and configuration.token in existing_acls_mapped_by_token:
         return update_acl(consul_client, configuration)
-    else:
-        if configuration.token in existing_acls_mapped_by_token:
-            raise AssertionError()
-        if configuration.name in existing_acls_mapped_by_name:
-            raise AssertionError()
-        return create_acl(consul_client, configuration)
+    if configuration.token in existing_acls_mapped_by_token:
+        raise AssertionError()
+    if configuration.name in existing_acls_mapped_by_name:
+        raise AssertionError()
+    return create_acl(consul_client, configuration)
 
 
 def update_acl(consul_client, configuration):
@@ -355,10 +357,7 @@ def encode_rules_as_hcl_string(rules):
         # Note: empty string is not valid HCL according to `hcl.load` however, the ACL `Rule` property will be an empty
         # string if there is no rules...
         return None
-    rules_as_hcl = ""
-    for rule in rules:
-        rules_as_hcl += encode_rule_as_hcl_string(rule)
-    return rules_as_hcl
+    return "".join(encode_rule_as_hcl_string(rule) for rule in rules)
 
 
 def encode_rule_as_hcl_string(rule):
@@ -415,9 +414,9 @@ def encode_rules_as_json(rules):
             rules_as_json[rule.scope][rule.pattern] = {
                 _POLICY_JSON_PROPERTY: rule.policy
             }
+        elif rule.scope in rules_as_json:
+            raise AssertionError()
         else:
-            if rule.scope in rules_as_json:
-                raise AssertionError()
             rules_as_json[rule.scope] = rule.policy
     return rules_as_json
 
@@ -577,10 +576,7 @@ class RuleCollection:
         return iter(all_rules)
 
     def __len__(self):
-        count = 0
-        for scope in RULE_SCOPES:
-            count += len(self._rules[scope])
-        return count
+        return sum(len(self._rules[scope]) for scope in RULE_SCOPES)
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) \

@@ -79,8 +79,7 @@ class Bzr(object):
 
         cmd = "%s revno" % self.bzr_path
         rc, stdout, stderr = self.module.run_command(cmd, cwd=self.dest)
-        revno = stdout.strip()
-        return revno
+        return stdout.strip()
 
     def clone(self):
         '''makes a new bzr branch if it does not already exist'''

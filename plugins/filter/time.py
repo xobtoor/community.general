@@ -40,7 +40,7 @@ UNIT_TO_SHORT_FORM = {
 def multiply(factors):
     result = 1
     for factor in factors:
-        result = result * factor
+        result *= factor
     return result
 
 
@@ -128,7 +128,7 @@ class FilterModule(object):
     ''' Ansible time jinja2 filters '''
 
     def filters(self):
-        filters = {
+        return {
             'to_time_unit': to_time_unit,
             'to_milliseconds': to_milliseconds,
             'to_seconds': to_seconds,
@@ -139,5 +139,3 @@ class FilterModule(object):
             'to_months': to_months,
             'to_years': to_years,
         }
-
-        return filters

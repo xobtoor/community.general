@@ -302,9 +302,7 @@ class ClcAlertPolicy:
         policy = self._alert_policy_exists(policy_name)
         if not policy:
             changed = True
-            policy = None
-            if not self.module.check_mode:
-                policy = self._create_alert_policy()
+            policy = self._create_alert_policy() if not self.module.check_mode else None
         else:
             changed_u, policy = self._ensure_alert_policy_is_updated(policy)
             if changed_u:
@@ -370,15 +368,11 @@ class ClcAlertPolicy:
         :param alias: the account alias
         :return: the alert policies for the account alias
         """
-        response = {}
-
         policies = self.clc.v2.API.Call('GET',
                                         '/v2/alertPolicies/%s'
                                         % alias)
 
-        for policy in policies.get('items'):
-            response[policy.get('id')] = policy
-        return response
+        return {policy.get('id'): policy for policy in policies.get('items')}
 
     def _create_alert_policy(self):
         """

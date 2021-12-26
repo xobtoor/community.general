@@ -178,7 +178,6 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
 
     def _add_vms(self, vms, hosts, pools):
         for uuid, vm in vms.items():
-            group = 'with_ip'
             ip = vm.get('mainIpAddress')
             entry_name = uuid
             power_state = vm['power_state'].lower()
@@ -199,8 +198,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
                 self.inventory.add_child(pool_name, entry_name)
 
             # Grouping VMs with an IP together
-            if ip is None:
-                group = 'without_ip'
+            group = 'without_ip' if ip is None else 'with_ip'
             self.inventory.add_group(group)
             self.inventory.add_child(group, entry_name)
 

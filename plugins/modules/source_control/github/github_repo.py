@@ -150,11 +150,7 @@ def create_repo(gh, name, organization=None, private=None, description=None, che
     result = dict(
         changed=False,
         repo=dict())
-    if organization:
-        target = gh.get_organization(organization)
-    else:
-        target = gh.get_user()
-
+    target = gh.get_organization(organization) if organization else gh.get_user()
     repo = None
     try:
         repo = target.get_repo(name=name)
@@ -171,12 +167,16 @@ def create_repo(gh, name, organization=None, private=None, description=None, che
         result['changed'] = True
 
     changes = {}
-    if private is not None:
-        if repo is None or repo.raw_data['private'] != private:
-            changes['private'] = private
-    if description is not None:
-        if repo is None or repo.raw_data['description'] not in (description, description or None):
-            changes['description'] = description
+    if private is not None and (
+        repo is None or repo.raw_data['private'] != private
+    ):
+        changes['private'] = private
+    if description is not None and (
+        repo is None
+        or repo.raw_data['description']
+        not in (description, description or None)
+    ):
+        changes['description'] = description
 
     if changes:
         if not check_mode:
@@ -193,10 +193,7 @@ def create_repo(gh, name, organization=None, private=None, description=None, che
 
 def delete_repo(gh, name, organization=None, check_mode=False):
     result = dict(changed=False)
-    if organization:
-        target = gh.get_organization(organization)
-    else:
-        target = gh.get_user()
+    target = gh.get_organization(organization) if organization else gh.get_user()
     try:
         repo = target.get_repo(name=name)
         if not check_mode:

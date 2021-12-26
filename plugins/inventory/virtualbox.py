@@ -119,12 +119,11 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
         for group in source_data:
             if group == 'all':
                 continue
-            else:
-                group = self.inventory.add_group(group)
-                hosts = source_data[group].get('hosts', [])
-                for host in hosts:
-                    self._populate_host_vars([host], hostvars.get(host, {}), group)
-                self.inventory.add_child('all', group)
+            group = self.inventory.add_group(group)
+            hosts = source_data[group].get('hosts', [])
+            for host in hosts:
+                self._populate_host_vars([host], hostvars.get(host, {}), group)
+            self.inventory.add_child('all', group)
         if not source_data:
             for host in hostvars:
                 self.inventory.add_host(host)
@@ -171,7 +170,6 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
                 if netdata:
                     self.inventory.set_variable(current_host, 'ansible_host', netdata)
 
-            # found groups
             elif k == 'Groups':
                 for group in v.split('/'):
                     if group:
@@ -189,9 +187,8 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
                     if prevkey not in hostvars[current_host]:
                         hostvars[current_host][prevkey] = {}
                     hostvars[current_host][prevkey][pref_k] = v
-                else:
-                    if v != '':
-                        hostvars[current_host][pref_k] = v
+                elif v != '':
+                    hostvars[current_host][pref_k] = v
                 if self._ungrouped_host(current_host, cacheable_results):
                     if 'ungrouped' not in cacheable_results:
                         cacheable_results['ungrouped'] = {'hosts': []}
@@ -222,9 +219,10 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
     def verify_file(self, path):
 
         valid = False
-        if super(InventoryModule, self).verify_file(path):
-            if path.endswith(('virtualbox.yaml', 'virtualbox.yml', 'vbox.yaml', 'vbox.yml')):
-                valid = True
+        if super(InventoryModule, self).verify_file(path) and path.endswith(
+            ('virtualbox.yaml', 'virtualbox.yml', 'vbox.yaml', 'vbox.yml')
+        ):
+            valid = True
         return valid
 
     def parse(self, inventory, loader, path, cache=True):

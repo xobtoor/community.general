@@ -186,10 +186,7 @@ def query_toplevel(module, name):
 def query_package(module, name):
     cmd = "%s -v info --installed %s" % (APK_PATH, name)
     rc, stdout, stderr = module.run_command(cmd, check_rc=False)
-    if rc == 0:
-        return True
-    else:
-        return False
+    return rc == 0
 
 
 def query_latest(module, name):
@@ -197,18 +194,14 @@ def query_latest(module, name):
     rc, stdout, stderr = module.run_command(cmd, check_rc=False)
     search_pattern = r"(%s)-[\d\.\w]+-[\d\w]+\s+(.)\s+[\d\.\w]+-[\d\w]+\s+" % (re.escape(name))
     match = re.search(search_pattern, stdout)
-    if match and match.group(2) == "<":
-        return False
-    return True
+    return not match or match.group(2) != "<"
 
 
 def query_virtual(module, name):
     cmd = "%s -v info --description %s" % (APK_PATH, name)
     rc, stdout, stderr = module.run_command(cmd, check_rc=False)
     search_pattern = r"^%s: virtual meta package" % (re.escape(name))
-    if re.search(search_pattern, stdout):
-        return True
-    return False
+    return bool(re.search(search_pattern, stdout))
 
 
 def get_dependencies(module, name):
@@ -238,7 +231,6 @@ def upgrade_packages(module, available):
 
 
 def install_packages(module, names, state):
-    upgrade = False
     to_install = []
     to_upgrade = []
     for name in names:
@@ -249,13 +241,11 @@ def install_packages(module, names, state):
             for dependency in dependencies:
                 if state == 'latest' and not query_latest(module, dependency):
                     to_upgrade.append(dependency)
-        else:
-            if not query_toplevel(module, name):
-                to_install.append(name)
-            elif state == 'latest' and not query_latest(module, name):
-                to_upgrade.append(name)
-    if to_upgrade:
-        upgrade = True
+        elif not query_toplevel(module, name):
+            to_install.append(name)
+        elif state == 'latest' and not query_latest(module, name):
+            to_upgrade.append(name)
+    upgrade = bool(to_upgrade)
     if not to_install and not upgrade:
         module.exit_json(changed=False, msg="package(s) already installed")
     packages = " ".join(to_install + to_upgrade)
@@ -264,11 +254,10 @@ def install_packages(module, names, state):
             cmd = "%s add --upgrade --simulate %s" % (APK_PATH, packages)
         else:
             cmd = "%s add --upgrade %s" % (APK_PATH, packages)
+    elif module.check_mode:
+        cmd = "%s add --simulate %s" % (APK_PATH, packages)
     else:
-        if module.check_mode:
-            cmd = "%s add --simulate %s" % (APK_PATH, packages)
-        else:
-            cmd = "%s add %s" % (APK_PATH, packages)
+        cmd = "%s add %s" % (APK_PATH, packages)
     rc, stdout, stderr = module.run_command(cmd, check_rc=False)
     packagelist = parse_for_packages(stdout)
     if rc != 0:
@@ -277,10 +266,7 @@ def install_packages(module, names, state):
 
 
 def remove_packages(module, names):
-    installed = []
-    for name in names:
-        if query_package(module, name):
-            installed.append(name)
+    installed = [name for name in names if query_package(module, name)]
     if not installed:
         module.exit_json(changed=False, msg="package(s) already removed")
     names = " ".join(installed)

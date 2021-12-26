@@ -232,9 +232,7 @@ class CacheModule(BaseCacheModule):
             self.delete(key)
 
     def copy(self):
-        # TODO: there is probably a better way to do this in redis
-        ret = dict([(k, self.get(k)) for k in self.keys()])
-        return ret
+        return dict([(k, self.get(k)) for k in self.keys()])
 
     def __getstate__(self):
         return dict()
