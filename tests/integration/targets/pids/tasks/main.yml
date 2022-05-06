@@ -6,6 +6,7 @@
 # Test code for the pids module
 # Copyright: (c) 2019, Saranya Sridharan
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+
 - name: Attempt installation of latest 'psutil' version
   pip:
     name: psutil
@@ -18,7 +19,7 @@
   when: psutil_latest_install is failed
 
 - name: "Checking the empty result"
-  pids: 
+  pids:
     name: "blahblah"
   register: emptypids
 
@@ -26,41 +27,38 @@
   assert:
     that:
     - emptypids is not changed
-    - emptypids.pids == [] 
+    - emptypids.pids == []
 
 - name: "Picking a random process name"
   set_fact:
     random_name: some-random-long-name-{{ 99999999 | random }}
 
-- name: "finding the 'sleep' binary"
-  command: which sleep
-  register: find_sleep
+- name: Copy the fake 'sleep' source code
+  copy:
+    src: sleeper.c
+    dest: "{{ remote_tmp_dir }}/sleeper.c"
+    mode: 0644
 
-- name: "Copying 'sleep' binary"
-  command: cp {{ find_sleep.stdout }} {{ remote_tmp_dir }}/{{ random_name }}
-  # The following does not work on macOS 11.1 (it uses shutil.copystat, and that will die with a PermissionError):
-  # copy:
-  #   src: "{{ find_sleep.stdout }}"
-  #   dest: "{{ remote_tmp_dir }}/{{ random_name }}"
-  #   mode: "0777"
-  #   remote_src: true
+- name: Compile fake 'sleep' binary
+  command: cc {{ remote_tmp_dir }}/sleeper.c -o {{ remote_tmp_dir }}/{{ random_name }}
 
 - name: Copy helper script
   copy:
     src: obtainpid.sh
     dest: "{{ remote_tmp_dir }}/obtainpid.sh"
+    mode: 0755
 
-- name: "Running the copy of 'sleep' binary"
+- name: "Run the fake 'sleep' binary"
   command: "sh {{ remote_tmp_dir }}/obtainpid.sh '{{ remote_tmp_dir }}/{{ random_name }}' '{{ remote_tmp_dir }}/obtainpid.txt'"
 
   async: 100
   poll: 0
 
-- name: "Wait for one second to make sure that the sleep copy has actually been started"
+- name: "Wait for one second to make sure that the fake 'sleep' binary has actually been started"
   pause:
     seconds: 1
 
-- name: "Checking the process IDs (PIDs) of sleep binary"
+- name: "Checking the process IDs (PIDs) of fake 'sleep' binary"
   pids:
     name: "{{ random_name }}"
   register: pids

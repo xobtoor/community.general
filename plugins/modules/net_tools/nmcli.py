@@ -55,8 +55,10 @@ options:
             - Type C(generic) is added in Ansible 2.5.
             - Type C(infiniband) is added in community.general 2.0.0.
             - Type C(gsm) is added in community.general 3.7.0.
+            - Type C(wireguard) is added in community.general 4.3.0
         type: str
-        choices: [ bond, bond-slave, bridge, bridge-slave, dummy, ethernet, generic, gre, infiniband, ipip, sit, team, team-slave, vlan, vxlan, wifi, gsm ]
+        choices: [ bond, bond-slave, bridge, bridge-slave, dummy, ethernet, generic, gre, infiniband, ipip, sit, team, team-slave, vlan, vxlan, wifi, gsm,
+            wireguard ]
     mode:
         description:
             - This is the type of device or network connection that you wish to create for a bond or bridge.
@@ -88,11 +90,53 @@ options:
         version_added: 3.2.0
     routes4:
         description:
-            - The list of ipv4 routes.
-            - Use the format '192.0.3.0/24 192.0.2.1'
+            - The list of IPv4 routes.
+            - Use the format C(192.0.3.0/24 192.0.2.1).
+            - To specify more complex routes, use the I(routes4_extended) option.
         type: list
         elements: str
         version_added: 2.0.0
+    routes4_extended:
+        description:
+            - The list of IPv4 routes.
+        type: list
+        elements: dict
+        suboptions:
+            ip:
+                description:
+                    - IP or prefix of route.
+                    - Use the format C(192.0.3.0/24).
+                type: str
+                required: true
+            next_hop:
+                description:
+                    - Use the format C(192.0.2.1).
+                type: str
+            metric:
+                description:
+                    - Route metric.
+                type: int
+            table:
+                description:
+                    - The table to add this route to.
+                    - The default depends on C(ipv4.route-table).
+                type: int
+            cwnd:
+                description:
+                    - The clamp for congestion window.
+                type: int
+            mtu:
+                description:
+                    - If non-zero, only transmit packets of the specified size or smaller.
+                type: int
+            onlink:
+                description:
+                    - Pretend that the nexthop is directly attached to this link, even if it does not match any interface prefix.
+                type: bool
+            tos:
+                description:
+                    - The Type Of Service.
+                type: int
     route_metric4:
         description:
             - Set metric level of ipv4 routes configured on interface.
@@ -159,6 +203,56 @@ options:
         type: bool
         default: false
         version_added: 3.2.0
+    routes6:
+        description:
+            - The list of IPv6 routes.
+            - Use the format C(fd12:3456:789a:1::/64 2001:dead:beef::1).
+            - To specify more complex routes, use the I(routes6_extended) option.
+        type: list
+        elements: str
+        version_added: 4.4.0
+    routes6_extended:
+        description:
+            - The list of IPv6 routes but with parameters.
+        type: list
+        elements: dict
+        suboptions:
+            ip:
+                description:
+                    - IP or prefix of route.
+                    - Use the format C(fd12:3456:789a:1::/64).
+                type: str
+                required: true
+            next_hop:
+                description:
+                    - Use the format C(2001:dead:beef::1).
+                type: str
+            metric:
+                description:
+                    - Route metric.
+                type: int
+            table:
+                description:
+                    - The table to add this route to.
+                    - The default depends on C(ipv6.route-table).
+                type: int
+            cwnd:
+                description:
+                    - The clamp for congestion window.
+                type: int
+            mtu:
+                description:
+                    - If non-zero, only transmit packets of the specified size or smaller.
+                type: int
+            onlink:
+                description:
+                    - Pretend that the nexthop is directly attached to this link, even if it does not match any interface prefix.
+                type: bool
+    route_metric6:
+        description:
+            - Set metric level of IPv6 routes configured on interface.
+        type: int
+        version_added: 4.4.0
     dns6:
         description:
             - A list of up to 3 dns servers.
@@ -280,8 +374,9 @@ options:
         description:
             - This is only used with 'bridge-slave' - 'hairpin mode' for the slave, which allows frames to be sent back out through the slave the
               frame was received on.
+            - The default value is C(true), but that is being deprecated
+              and it will be changed to C(false) in community.general 7.0.0.
         type: bool
-        default: yes
     runner:
         description:
             - This is the type of device or network connection that you wish to create for a team.
@@ -754,6 +849,62 @@ options:
                     - The username used to authenticate with the network, if required.
                     - Many providers do not require a username, or accept any username.
                     - But if a username is required, it is specified here.
+    wireguard:
+        description:
+            - The configuration of the Wireguard connection.
+            - Note the list of suboption attributes may vary depending on which version of NetworkManager/nmcli is installed on the host.
+            - 'An up-to-date list of supported attributes can be found here:
+              U(https://networkmanager.dev/docs/api/latest/settings-wireguard.html).'
+            - 'For instance to configure a listen port:
+              C({listen-port: 12345}).'
+        type: dict
+        version_added: 4.3.0
+        suboptions:
+            fwmark:
+                description:
+                    - The 32-bit fwmark for outgoing packets.
+                    - The use of fwmark is optional and is by default off. Setting it to 0 disables it.
+                    - Note that I(wireguard.ip4-auto-default-route) or I(wireguard.ip6-auto-default-route) enabled, implies to automatically choose a fwmark.
+                type: int
+            ip4-auto-default-route:
+                description:
+                    - Whether to enable special handling of the IPv4 default route.
+                    - If enabled, the IPv4 default route from I(wireguard.peer-routes) will be placed to a dedicated routing-table and two policy
+                        routing rules will be added.
+                    - The fwmark number is also used as routing-table for the default-route, and if fwmark is zero, an unused fwmark/table is chosen
+                        automatically. This corresponds to what wg-quick does with Table=auto and what WireGuard calls "Improved Rule-based Routing"
+                type: bool
+            ip6-auto-default-route:
+                description:
+                    - Like I(wireguard.ip4-auto-default-route), but for the IPv6 default route.
+                type: bool
+            listen-port:
+                description: The WireGuard connection listen-port. If not specified, the port will be chosen randomly when the
+                    interface comes up.
+                type: int
+            mtu:
+                description:
+                    - If non-zero, only transmit packets of the specified size or smaller, breaking larger packets up into multiple fragments.
+                    - If zero a default MTU is used. Note that contrary to wg-quick's MTU setting, this does not take into account the current routes
+                        at the time of activation.
+                type: int
+            peer-routes:
+                description:
+                    - Whether to automatically add routes for the AllowedIPs ranges of the peers.
+                    - If C(true) (the default), NetworkManager will automatically add routes in the routing tables according to C(ipv4.route-table) and
+                        C(ipv6.route-table). Usually you want this automatism enabled.
+                    - If C(false), no such routes are added automatically. In this case, the user may want to configure static routes in C(ipv4.routes)
+                        and C(ipv6.routes), respectively.
+                    - Note that if the peer's AllowedIPs is C(0.0.0.0/0) or C(::/0) and the profile's C(ipv4.never-default) or C(ipv6.never-default)
+                        setting is enabled, the peer route for this peer won't be added automatically.
+                type: bool
+            private-key:
+                description: The 256 bit private-key in base64 encoding.
+                type: str
+            private-key-flags:
+                description: C(NMSettingSecretFlags) indicating how to handle the I(wireguard.private-key) property.
+                type: int
+                choices: [ 0, 1, 2 ]
 '''
 
 EXAMPLES = r'''
@@ -1126,6 +1277,17 @@ EXAMPLES = r'''
     autoconnect: true
     state: present
 
+- name: Create a wireguard connection
+  community.general.nmcli:
+    type: wireguard
+    conn_name: my-wg-provider
+    ifname: mywg0
+    wireguard:
+        listen-port: 51820
+        private-key: my-private-key
+    autoconnect: true
+    state: present
+
 '''
 
 RETURN = r"""#
@@ -1179,6 +1341,7 @@ class Nmcli(object):
         self.gw4 = module.params['gw4']
         self.gw4_ignore_auto = module.params['gw4_ignore_auto']
         self.routes4 = module.params['routes4']
+        self.routes4_extended = module.params['routes4_extended']
         self.route_metric4 = module.params['route_metric4']
         self.routing_rules4 = module.params['routing_rules4']
         self.never_default4 = module.params['never_default4']
@@ -1190,6 +1353,9 @@ class Nmcli(object):
         self.ip6 = module.params['ip6']
         self.gw6 = module.params['gw6']
         self.gw6_ignore_auto = module.params['gw6_ignore_auto']
+        self.routes6 = module.params['routes6']
+        self.routes6_extended = module.params['routes6_extended']
+        self.route_metric6 = module.params['route_metric6']
         self.dns6 = module.params['dns6']
         self.dns6_search = module.params['dns6_search']
         self.dns6_ignore_auto = module.params['dns6_ignore_auto']
@@ -1211,7 +1377,8 @@ class Nmcli(object):
         self.hellotime = module.params['hellotime']
         self.maxage = module.params['maxage']
         self.ageingtime = module.params['ageingtime']
-        self.hairpin = module.params['hairpin']
+        # hairpin should be back to normal in 7.0.0
+        self._hairpin = module.params['hairpin']
         self.path_cost = module.params['path_cost']
         self.mac = module.params['mac']
         self.runner = module.params['runner']
@@ -1236,10 +1403,11 @@ class Nmcli(object):
         self.wifi = module.params['wifi']
         self.wifi_sec = module.params['wifi_sec']
         self.gsm = module.params['gsm']
+        self.wireguard = module.params['wireguard']
 
         if self.method4:
             self.ipv4_method = self.method4
-        elif self.type == 'dummy' and not self.ip4:
+        elif self.type in ('dummy', 'wireguard') and not self.ip4:
             self.ipv4_method = 'disabled'
         elif self.ip4:
             self.ipv4_method = 'manual'
@@ -1248,7 +1416,7 @@ class Nmcli(object):
 
         if self.method6:
             self.ipv6_method = self.method6
-        elif self.type == 'dummy' and not self.ip6:
+        elif self.type in ('dummy', 'wireguard') and not self.ip6:
             self.ipv6_method = 'disabled'
         elif self.ip6:
             self.ipv6_method = 'manual'
@@ -1256,6 +1424,18 @@ class Nmcli(object):
             self.ipv6_method = None
 
         self.edit_commands = []
+
+    @property
+    def hairpin(self):
+        if self._hairpin is None:
+            self.module.deprecate(
+                "Parameter 'hairpin' default value will change from true to false in community.general 7.0.0. "
+                "Set the value explicitly to supress this warning.",
+                version='7.0.0', collection_name='community.general',
+            )
+            # Should be False in 7.0.0 but then that should be in argument_specs
+            self._hairpin = True
+        return self._hairpin
 
     def execute_command(self, cmd, use_unsafe_shell=False, data=None):
         if isinstance(cmd, list):
@@ -1287,7 +1467,7 @@ class Nmcli(object):
                 'ipv4.ignore-auto-dns': self.dns4_ignore_auto,
                 'ipv4.gateway': self.gw4,
                 'ipv4.ignore-auto-routes': self.gw4_ignore_auto,
-                'ipv4.routes': self.routes4,
+                'ipv4.routes': self.enforce_routes_format(self.routes4, self.routes4_extended),
                 'ipv4.route-metric': self.route_metric4,
                 'ipv4.routing-rules': self.routing_rules4,
                 'ipv4.never-default': self.never_default4,
@@ -1299,6 +1479,8 @@ class Nmcli(object):
                 'ipv6.ignore-auto-dns': self.dns6_ignore_auto,
                 'ipv6.gateway': self.gw6,
                 'ipv6.ignore-auto-routes': self.gw6_ignore_auto,
+                'ipv6.routes': self.enforce_routes_format(self.routes6, self.routes6_extended),
+                'ipv6.route-metric': self.route_metric6,
                 'ipv6.method': self.ipv6_method,
                 'ipv6.ip6-privacy': self.ip_privacy6,
                 'ipv6.addr-gen-mode': self.addr_gen_mode6
@@ -1404,6 +1586,12 @@ class Nmcli(object):
                     options.update({
                         'gsm.%s' % name: value,
                     })
+        elif self.type == 'wireguard':
+            if self.wireguard:
+                for name, value in self.wireguard.items():
+                    options.update({
+                        'wireguard.%s' % name: value,
+                    })
         # Convert settings values based on the situation.
         for setting, value in options.items():
             setting_type = self.settings_type(setting)
@@ -1436,6 +1624,7 @@ class Nmcli(object):
             'bridge',
             'dummy',
             'ethernet',
+            '802-3-ethernet',
             'generic',
             'gre',
             'infiniband',
@@ -1444,7 +1633,9 @@ class Nmcli(object):
             'team',
             'vlan',
             'wifi',
+            '802-11-wireless',
             'gsm',
+            'wireguard',
         )
 
     @property
@@ -1519,6 +1710,29 @@ class Nmcli(object):
             return None
         return [address if '/' in address else address + '/128' for address in ip6_addresses]
 
+    def enforce_routes_format(self, routes, routes_extended):
+        if routes is not None:
+            return routes
+        elif routes_extended is not None:
+            return [self.route_to_string(route) for route in routes_extended]
+        else:
+            return None
+
+    @staticmethod
+    def route_to_string(route):
+        result_str = ''
+        result_str += route['ip']
+        if route.get('next_hop') is not None:
+            result_str += ' ' + route['next_hop']
+        if route.get('metric') is not None:
+            result_str += ' ' + str(route['metric'])
+
+        for attribute, value in sorted(route.items()):
+            if attribute not in ('ip', 'next_hop', 'metric') and value is not None:
+                result_str += ' {0}={1}'.format(attribute, str(value).lower())
+
+        return result_str
+
     @staticmethod
     def bool_to_string(boolean):
         if boolean:
@@ -1551,6 +1765,7 @@ class Nmcli(object):
                          'ipv4.routing-rules',
                          'ipv6.dns',
                          'ipv6.dns-search',
+                         'ipv6.routes',
                          '802-11-wireless-security.group',
                          '802-11-wireless-security.leap-password-flags',
                          '802-11-wireless-security.pairwise',
@@ -1560,6 +1775,20 @@ class Nmcli(object):
                          '802-11-wireless.mac-address-blacklist'):
             return list
         return str
+
+    def get_route_params(self, raw_values):
+        routes_params = []
+        for raw_value in raw_values:
+            route_params = {}
+            for parameter, value in re.findall(r'([\w-]*)\s?=\s?([^\s,}]*)', raw_value):
+                if parameter == 'nh':
+                    route_params['next_hop'] = value
+                elif parameter == 'mt':
+                    route_params['metric'] = value
+                else:
+                    route_params[parameter] = value
+            routes_params.append(route_params)
+        return [self.route_to_string(route_params) for route_params in routes_params]
 
     def list_connection_info(self):
         cmd = [self.nmcli_bin, '--fields', 'name', '--terse', 'con', 'show']
@@ -1676,7 +1905,7 @@ class Nmcli(object):
                             alias_key = alias_pair[0]
                             alias_value = alias_pair[1]
                             conn_info[alias_key] = alias_value
-                elif key == 'ipv4.routes':
+                elif key in ('ipv4.routes', 'ipv6.routes'):
                     conn_info[key] = [s.strip() for s in raw_value.split(';')]
                 elif key_type == list:
                     conn_info[key] = [s.strip() for s in raw_value.split(',')]
@@ -1755,14 +1984,8 @@ class Nmcli(object):
 
             if key in conn_info:
                 current_value = conn_info[key]
-                if key == 'ipv4.routes' and current_value is not None:
-                    # ipv4.routes do not have same options and show_connection() format
-                    # options: ['10.11.0.0/24 10.10.0.2', '10.12.0.0/24 10.10.0.2 200']
-                    # show_connection(): ['{ ip = 10.11.0.0/24, nh = 10.10.0.2 }', '{ ip = 10.12.0.0/24, nh = 10.10.0.2, mt = 200 }']
-                    # Need to convert in order to compare both
-                    current_value = [re.sub(r'^{\s*ip\s*=\s*([^, ]+),\s*nh\s*=\s*([^} ]+),\s*mt\s*=\s*([^} ]+)\s*}', r'\1 \2 \3',
-                                     route) for route in current_value]
-                    current_value = [re.sub(r'^{\s*ip\s*=\s*([^, ]+),\s*nh\s*=\s*([^} ]+)\s*}', r'\1 \2', route) for route in current_value]
+                if key in ('ipv4.routes', 'ipv6.routes') and current_value is not None:
+                    current_value = self.get_route_params(current_value)
                 if key == self.mac_setting:
                     # MAC addresses are case insensitive, nmcli always reports them in uppercase
                     value = value.upper()
@@ -1801,6 +2024,12 @@ class Nmcli(object):
         options = {
             'connection.interface-name': self.ifname,
         }
+
+        if not self.type:
+            current_con_type = self.show_connection().get('connection.type')
+            if current_con_type:
+                self.type = current_con_type
+
         options.update(self.connection_options(detect_change=True))
         return self._compare_conn_params(self.show_connection(), options)
 
@@ -1834,11 +2063,24 @@ def main():
                           'vxlan',
                           'wifi',
                           'gsm',
+                          'wireguard',
                       ]),
             ip4=dict(type='list', elements='str'),
             gw4=dict(type='str'),
             gw4_ignore_auto=dict(type='bool', default=False),
             routes4=dict(type='list', elements='str'),
+            routes4_extended=dict(type='list',
+                                  elements='dict',
+                                  options=dict(
+                                      ip=dict(type='str', required=True),
+                                      next_hop=dict(type='str'),
+                                      metric=dict(type='int'),
+                                      table=dict(type='int'),
+                                      tos=dict(type='int'),
+                                      cwnd=dict(type='int'),
+                                      mtu=dict(type='int'),
+                                      onlink=dict(type='bool')
+                                  )),
             route_metric4=dict(type='int'),
             routing_rules4=dict(type='list', elements='str'),
             never_default4=dict(type='bool', default=False),
@@ -1854,6 +2096,19 @@ def main():
             dns6=dict(type='list', elements='str'),
             dns6_search=dict(type='list', elements='str'),
             dns6_ignore_auto=dict(type='bool', default=False),
+            routes6=dict(type='list', elements='str'),
+            routes6_extended=dict(type='list',
+                                  elements='dict',
+                                  options=dict(
+                                      ip=dict(type='str', required=True),
+                                      next_hop=dict(type='str'),
+                                      metric=dict(type='int'),
+                                      table=dict(type='int'),
+                                      cwnd=dict(type='int'),
+                                      mtu=dict(type='int'),
+                                      onlink=dict(type='bool')
+                                  )),
+            route_metric6=dict(type='int'),
             method6=dict(type='str', choices=['ignore', 'auto', 'dhcp', 'link-local', 'manual', 'shared', 'disabled']),
             ip_privacy6=dict(type='str', choices=['disabled', 'prefer-public-addr', 'prefer-temp-addr', 'unknown']),
             addr_gen_mode6=dict(type='str', choices=['eui64', 'stable-privacy']),
@@ -1878,7 +2133,7 @@ def main():
             hellotime=dict(type='int', default=2),
             maxage=dict(type='int', default=20),
             ageingtime=dict(type='int', default=300),
-            hairpin=dict(type='bool', default=True),
+            hairpin=dict(type='bool'),
             path_cost=dict(type='int', default=100),
             # team specific vars
             runner=dict(type='str', default='roundrobin',
@@ -1907,8 +2162,11 @@ def main():
             wifi=dict(type='dict'),
             wifi_sec=dict(type='dict', no_log=True),
             gsm=dict(type='dict'),
+            wireguard=dict(type='dict'),
         ),
-        mutually_exclusive=[['never_default4', 'gw4']],
+        mutually_exclusive=[['never_default4', 'gw4'],
+                            ['routes4_extended', 'routes4'],
+                            ['routes6_extended', 'routes6']],
         required_if=[("type", "wifi", [("ssid")])],
         supports_check_mode=True,
     )
